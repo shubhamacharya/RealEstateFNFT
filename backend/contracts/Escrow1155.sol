@@ -3,33 +3,52 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-contract Escrow1155 is IERC1155Receiver {
+contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
+    
+    struct Trasnsaction {
+        address payable seller;
+        address payable sender;
+        uint256 tokenID;
+        uint256 amount;
+        uint256 noOfTokens;
+        Status transactionStatus;
+    }
+    
     enum Status {
-        newEscrow,
-        tokenDeposited,
-        cancelTokenTransfer,
-        ethDeposited,
-        canceledBeforeDelivery,
-        deliveryInitiated,
-        delivered
+        OPEN,
+        PAYMENT,
+        DELIVERY,
+        CONFIRMED,
+        DISPUTTED,
+        REFUNDED,
+        WITHDRAWED
     }
 
-    address payable public sellerAddress;
-    address payable public buyerAddress;
     address public ERC1155Address;
-    uint256 tokenID;
-    uint256 amount;
     bool buyerCancel = false;
     bool sellerCancel = false;
-    Status public tokenState;
 
     event TokenDepoisted(uint256, uint256);
 
     constructor(address _ERC1155Address) {
-        tokenState = Status.newEscrow;
         ERC1155Address = _ERC1155Address;
+    }
+
+    function requestToken(address sellerAddress, uint256 _tokenID, uint256 _amount, uint256 _noOfTokens) public {
+        Trasnsaction memory txn;
+        txn.tokenID = _tokenID;
+        txn.amount = _amount;
+        txn.noOfTokens = _noOfTokens;
+        txn.seller = payable(sellerAddress);
+        txn.buyer = payable(msg.sender);
+        txn.status = Status.OPEN;
+
+        ERC1155(ERC1155Address).safeBatchTransferFrom(address(this), txn.tokenID, txn.noOfTokens, "").send({
+            from: sellerAddress
+        });
     }
 
     function depositToken(uint256 _TokenID, uint256 _amount) public currentStatus(Status.newEscrow)
