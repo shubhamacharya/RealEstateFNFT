@@ -5,12 +5,17 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     
-    struct Trasnsaction {
+    using Counters for Counters.Counter;
+    Counters.Counter public _transactionIdCounter;
+
+    struct Transaction {
+        uint256 id;
         address payable seller;
-        address payable sender;
+        address payable buyer;
         uint256 tokenID;
         uint256 amount;
         uint256 noOfTokens;
@@ -18,18 +23,24 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     }
     
     enum Status {
-        OPEN,
+        DEPOSITE,
         PAYMENT,
         DELIVERY,
         CONFIRMED,
         DISPUTTED,
-        REFUNDED,
-        WITHDRAWED
+        REFUND,
+        WITHDRAWED,
+        CLOSED
     }
+
+    Transaction[] transactionArray;
 
     address public ERC1155Address;
     bool buyerCancel = false;
     bool sellerCancel = false;
+
+    mapping(address=>uint256) private buyerVsTransactionId;
+    mapping(address=>uint256) private sellerVsTransactionId;
 
     event TokenDepoisted(uint256, uint256);
 
@@ -37,94 +48,99 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         ERC1155Address = _ERC1155Address;
     }
 
-    function requestToken(address sellerAddress, uint256 _tokenID, uint256 _amount, uint256 _noOfTokens) public {
-        Trasnsaction memory txn;
+    function depositToken(address sellerAddress, uint256 _tokenID, uint256 _amount, uint256 _noOfTokens) public {
+        Transaction memory txn;
+
+        txn.id = _transactionIdCounter.current();
         txn.tokenID = _tokenID;
         txn.amount = _amount;
         txn.noOfTokens = _noOfTokens;
         txn.seller = payable(sellerAddress);
         txn.buyer = payable(msg.sender);
-        txn.status = Status.OPEN;
+        txn.transactionStatus = Status.DEPOSITE;
 
-        ERC1155(ERC1155Address).safeBatchTransferFrom(address(this), txn.tokenID, txn.noOfTokens, "").send({
-            from: sellerAddress
-        });
+        ERC1155(ERC1155Address).safeTransferFrom(sellerAddress, address(this), txn.tokenID, txn.noOfTokens, "");
+        transactionArray[txn.id] = txn;
+        _transactionIdCounter.increment();
+        
+        emit TokenDepoisted(_tokenID, _amount);
     }
 
-    function depositToken(uint256 _TokenID, uint256 _amount) public currentStatus(Status.newEscrow)
+    function cancelBeforePayment(uint256 _transactionId) public currentStatus(Status.DEPOSITE, _transactionId) onlySeller(_transactionId)
     {
-        tokenID = _TokenID;
-        amount = _amount;
-        sellerAddress = payable(msg.sender);
-        ERC1155(ERC1155Address).safeTransferFrom(msg.sender, address(this), tokenID, amount, "");
-        tokenState = Status.tokenDeposited;
-        emit TokenDepoisted(_TokenID, _amount);
+        Transaction memory txn = transactionArray[_transactionId];
+        ERC1155(ERC1155Address).safeTransferFrom(address(this), msg.sender, txn.tokenID, txn.noOfTokens, "");
+        sellerCancel = true;
+        txn.transactionStatus = Status.WITHDRAWED;
     }
 
-    function cancelAtNFT() public currentStatus(Status.tokenDeposited) onlySeller
-    {
-        ERC1155(ERC1155Address).safeTransferFrom(address(this), msg.sender, tokenID, amount, "");
-        tokenState = Status.cancelTokenTransfer;
+    function depositETH(uint256 _transactionId) public payable currentStatus(Status.DEPOSITE, _transactionId) {
+        Transaction memory txn = transactionArray[_transactionId];
+        require(txn.amount == msg.value, "Amount must to equal to selling price of the property.");
+        txn.buyer = payable(msg.sender);
+        txn.transactionStatus = Status.PAYMENT;
     }
 
-    function cancelBeforeDelivery(bool _state) public payable currentStatus(Status.ethDeposited) BuyerOrSeller
+    function cancelBeforeDelivery(uint256 _transactionId) public payable currentStatus(Status.PAYMENT,_transactionId) BuyerOrSeller(_transactionId)
     {
-        if (msg.sender == sellerAddress) {
-            sellerCancel = _state;
+        Transaction memory txn = transactionArray[_transactionId];
+        if (msg.sender == txn.seller) {
+            sellerCancel = true;
+            txn.transactionStatus = Status.WITHDRAWED;
         } else {
-            buyerCancel = _state;
+            buyerCancel = true;
+            txn.transactionStatus = Status.REFUND;
         }
 
         if (sellerCancel == true && buyerCancel == true) {
             ERC1155(ERC1155Address).safeTransferFrom(
                 address(this),
-                sellerAddress,
-                tokenID,
-                amount,
+                txn.seller,
+                txn.tokenID,
+                txn.noOfTokens,
                 ""
             );
-            buyerAddress.transfer(address(this).balance);
-            tokenState = Status.canceledBeforeDelivery;
+            txn.buyer.transfer(txn.amount);
+            txn.transactionStatus = Status.CLOSED;
+        }
+        else{
+            txn.transactionStatus = Status.DISPUTTED;
         }
     }
 
-    function depositETH() public payable currentStatus(Status.tokenDeposited) {
-        buyerAddress = payable(msg.sender);
-        tokenState = Status.ethDeposited;
+    function initiateDelivery(uint256 _transactionId) public currentStatus(Status.PAYMENT, _transactionId) onlySeller(_transactionId) noDispute(_transactionId)
+    {
+        transactionArray[_transactionId].transactionStatus = Status.DELIVERY;
     }
 
-    function initiateDelivery() public currentStatus(Status.ethDeposited) onlySeller noDispute
+    function confirmDelivery(uint256 _transactionId) public payable currentStatus(Status.DELIVERY, _transactionId) onlyBuyer(_transactionId)
     {
-        tokenState = Status.deliveryInitiated;
-    }
-
-    function confirmDelivery() public payable currentStatus(Status.deliveryInitiated) onlyBuyer
-    {
+        Transaction memory txn = transactionArray[_transactionId];
         ERC1155(ERC1155Address).safeTransferFrom(
             address(this),
-            buyerAddress,
-            tokenID,
-            amount,
+            txn.buyer,
+            txn.tokenID,
+            txn.noOfTokens,
             ""
         );
-        payable(sellerAddress).transfer(address(this).balance);
-        tokenState = Status.delivered;
+        payable(txn.seller).transfer(txn.amount);
+        txn.transactionStatus = Status.CONFIRMED;
     }
 
     function getBalance() public view returns (uint256 balance) {
         return address(this).balance;
     }
 
-    function getTokenStatus() public view returns (string memory) {
-        Status temp = tokenState;
-        if (temp == Status.newEscrow) return "New Escrow";
-        else if (temp == Status.tokenDeposited) return "NFT Deposited";
-        else if (temp == Status.cancelTokenTransfer) return "Cancel NFT";
-        else if (temp == Status.ethDeposited) return "ETH Deposited";
-        else if (temp == Status.canceledBeforeDelivery)
-            return "Cancelled Before Delivery";
-        else if (temp == Status.deliveryInitiated) return "Delivery Initiated";
-        else return "Delivered";
+    function getTransactionStatus(uint256 _transactionId) public view returns (string memory) {
+
+        Status temp = transactionArray[_transactionId].transactionStatus;
+        if (temp == Status.DEPOSITE) return "Tokens Deposited";
+        else if (temp == Status.WITHDRAWED) return "Cancelled by seller";
+        else if (temp == Status.PAYMENT) return "ETH Deposited";
+        else if (temp == Status.DELIVERY) return "Delivery Initiated";
+        else if (temp == Status.REFUND) return "Cancelled by buyer";
+        else if (temp == Status.CONFIRMED) return "Delivery Success";
+        else return "In Dispute";
     }
 
     function onERC1155Received( address operator, address from, uint256 id, uint256 value, bytes calldata data) external pure override returns (bytes4) {
@@ -145,37 +161,37 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         _;
     }
 
-    modifier onlySeller() {
+    modifier onlySeller(uint256 _transactionId) {
         require(
-            msg.sender == sellerAddress,
+            msg.sender == transactionArray[_transactionId].seller,
             "Caller address is not the seller."
         );
         _;
     }
 
-    modifier onlyBuyer() {
-        require(msg.sender == buyerAddress, "Caller address is not the buyer.");
+    modifier onlyBuyer(uint256 _transactionId) {
+        require(msg.sender == transactionArray[_transactionId].buyer, "Caller address is not the buyer.");
         _;
     }
 
-    modifier noDispute() {
+    modifier noDispute(uint256 _transactionId) {
         require(
             buyerCancel == false && sellerCancel == false,
-            "Either buyer or seller cancled deal."
+            "Either buyer or seller cancelled deal."
         );
         _;
     }
 
-    modifier BuyerOrSeller() {
+    modifier BuyerOrSeller(uint256 _transactionId) {
         require(
-            msg.sender == buyerAddress || msg.sender == sellerAddress,
+            msg.sender == transactionArray[_transactionId].buyer || msg.sender == transactionArray[_transactionId].seller,
             "Caller is not buyer or seller."
         );
         _;
     }
 
-    modifier currentStatus(Status _state) {
-        require(tokenState == _state);
+    modifier currentStatus(Status _state,uint256 _transactionId) {
+        require(transactionArray[_transactionId].transactionStatus == _state);
         _;
     }
 }
