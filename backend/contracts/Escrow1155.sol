@@ -151,7 +151,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId) external view returns (bool)
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool)
     {
         return true;
     }
