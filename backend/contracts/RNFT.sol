@@ -2,10 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import "./Escrow1155.sol";
 
 contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
     address admin;
@@ -17,7 +17,9 @@ contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
         _fractionIdCounter.increment();
     }
 
-    struct Token{
+    mapping(uint256 => address) private _tokenApprovals;
+
+    struct Token {
         uint256 id;
         address owner;
         uint256 price;
@@ -25,6 +27,7 @@ contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
         uint256 totalFractions;
         uint256 fractionsOwned;
         address[] owners;
+        uint256 pricePerFraction;
         bool forSale;
     }
 
@@ -55,20 +58,20 @@ contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
         _tokenIdCounter.increment();
     }
 
-    /* function getNFTOwned(address ownerAddress) external view returns (uint256[] memory) {
-        return addressVsNFTOwned[ownerAddress];
-    } */
-
-    function createFractions( uint256 _tokenId, uint256 _noOfFractions) external onlyOwner(_tokenId) {
+    function createFractions(
+        uint256 _tokenId,
+        uint256 _noOfFractions
+    ) external onlyOwner(_tokenId) {
         require(exists(_tokenId), "Invalid Token Id");
         Token memory tempToken = tokenIdVsToken[_tokenId];
-        uint256 fractionId = _fractionIdCounter.current()*10 + tempToken.id;
+        uint256 fractionId = _fractionIdCounter.current() * 10 + tempToken.id;
         _mint(tempToken.owner, fractionId, _noOfFractions, "");
-        safeTransferFrom(tempToken.owner,address(this),tempToken.id,1,"");
+        safeTransferFrom(tempToken.owner, address(this), tempToken.id, 1, "");
         tempToken.fractionsOwned = _noOfFractions;
         tempToken.totalFractions = _noOfFractions;
         tempToken.fractionId = fractionId;
         tempToken.owner = address(this);
+        tempToken.pricePerFraction = tempToken.price / tempToken.totalFractions;
         tokenIdVsToken[_tokenId] = tempToken;
         _fractionIdCounter.increment();
         emit NFTFractioned(tempToken.owner, _tokenId, _noOfFractions);
@@ -76,7 +79,15 @@ contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
 
     function claimNFT(uint256 _tokenId) external payable {
         Token memory tempToken = tokenIdVsToken[_tokenId];
-        require(balanceOf(address(this),tempToken.fractionId) == totalSupply(tempToken.fractionId));
+        require(
+            _tokenApprovals[_tokenId] == msg.sender,
+            "Caller is not approved for this token."
+        );
+        require(
+            balanceOf(address(this), tempToken.fractionId) ==
+                totalSupply(tempToken.fractionId),
+            "Not all fractions of token are deposited."
+        );
         safeTransferFrom(address(this), msg.sender, _tokenId, 1, "");
         burn(address(this), tempToken.fractionId, tempToken.totalFractions);
         tempToken.fractionId = 0;
@@ -84,49 +95,114 @@ contract RNFT is ERC1155, ERC1155Burnable, ERC1155Supply, IERC1155Receiver {
         tempToken.fractionsOwned = 0;
         tempToken.owner = msg.sender;
         tokenIdVsToken[_tokenId] = tempToken;
+        setApproval(address(this), msg.sender, _tokenId, false);
     }
 
     function depositeFractions(uint256 _tokenId) external {
         Token memory tempToken = tokenIdVsToken[_tokenId];
         uint256 amount = balanceOf(msg.sender, tempToken.fractionId);
-        safeTransferFrom(msg.sender, address(this), tempToken.fractionId, amount, "");
+        safeTransferFrom(
+            msg.sender,
+            address(this),
+            tempToken.fractionId,
+            amount,
+            ""
+        );
+        setApproval(address(this), msg.sender, _tokenId, true);
     }
 
-    /*function addFractionsForSale( uint256 _tokenId, uint256 noOfTokens) external onlyOwner(_tokenId) {
-        require( balanceOf(msg.sender, _tokenId) > (nftIdVsFractionsForSale[_tokenId] + noOfTokens), "Not enough tokens to add for sale");
-        nftIdVsFractionsForSale[_tokenId] += noOfTokens;
-        emit FractionsForSale(_tokenId, noOfTokens);
+    function sellToken(uint256 _tokenId) public {
+        require(balanceOf(msg.sender, _tokenId) == 1, "Not enough tokens.");
+        setApproval(
+            msg.sender,
+            escrowContract,
+            tokenIdVsToken[_tokenId].fractionId,
+            true
+        );
+        Escrow1155(escrowContract).depositToken(
+            msg.sender,
+            _tokenId,
+            tokenIdVsToken[_tokenId].price,
+            1
+        );
     }
 
-    function addNFTForSale(uint256 _tokenId) external onlyOwner(_tokenId) {
-        require(balanceOf(msg.sender, _tokenId) == totalSupply(_tokenId), "Not owner of the all fractions");
-        if (totalSupply(_tokenId) > 1) {
-            _burn(msg.sender, _tokenId, balanceOf(msg.sender, _tokenId) - 1);
-        }
-        nftIdVsIsForSale[_tokenId] = true;
-        emit NFTForSale(_tokenId, true);
-    }*/
+    function sellFractions(
+        uint256 _tokenId,
+        uint256 _noOfTokens
+    ) public payable {
+        require(
+            balanceOf(msg.sender, tokenIdVsToken[_tokenId].fractionId) >=
+                _noOfTokens,
+            "Not enough tokens."
+        );
+        setApproval(
+            msg.sender,
+            escrowContract,
+            tokenIdVsToken[_tokenId].fractionId,
+            true
+        );
+        Escrow1155(escrowContract).depositToken(
+            msg.sender,
+            tokenIdVsToken[_tokenId].fractionId,
+            tokenIdVsToken[_tokenId].pricePerFraction * _noOfTokens,
+            _noOfTokens
+        );
+    }
 
     function setEscrowAddress(address _escrowContractAddress) external {
         escrowContract = _escrowContractAddress;
+        setApprovalForAll(escrowContract, true);
     }
 
-    function onERC1155Received( address operator, address from, uint256 id, uint256 value, bytes calldata data) external pure override returns (bytes4) {
-        return bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"));
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
+        return
+            bytes4(
+                keccak256(
+                    "onERC1155Received(address,address,uint256,uint256,bytes)"
+                )
+            );
     }
 
-    function onERC1155BatchReceived( address operator, address from, uint256[] calldata ids, uint256[] calldata values, bytes calldata data) external pure override returns (bytes4) {
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function setApprovalForAll(address owner, address operator, bool approved) public  virtual {
+    function setApproval(
+        address owner,
+        address operator,
+        uint256 _tokenId,
+        bool approved
+    ) public virtual {
         _setApprovalForAll(owner, operator, approved);
+        if (approved) {
+            _tokenApprovals[_tokenId] = operator;
+        } else {
+            delete _tokenApprovals[_tokenId];
+        }
         emit ApprovalForAll(owner, operator, approved);
     }
 
-
-    function _beforeTokenTransfer( address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal override(ERC1155, ERC1155Supply) 
-    {
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal override(ERC1155, ERC1155Supply) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
