@@ -8,7 +8,6 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
-    
     using Counters for Counters.Counter;
     Counters.Counter public _transactionIdCounter;
 
@@ -20,8 +19,10 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         uint256 amount;
         uint256 noOfTokens;
         Status transactionStatus;
+        bool buyerCancel;
+        bool sellerCancel;
     }
-    
+
     enum Status {
         DEPOSITE,
         PAYMENT,
@@ -33,87 +34,135 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         CLOSED
     }
 
-    Transaction[] transactionArray;
+    mapping(uint256 => Transaction) public transactionArray;
 
     address public ERC1155Address;
-    bool buyerCancel = false;
-    bool sellerCancel = false;
-
-    mapping(address=>uint256) private buyerVsTransactionId;
-    mapping(address=>uint256) private sellerVsTransactionId;
-
     event TokenDepoisted(uint256, uint256);
 
     constructor(address _ERC1155Address) {
         ERC1155Address = _ERC1155Address;
+        _transactionIdCounter.increment();
     }
 
-    function depositToken(address sellerAddress, uint256 _tokenID, uint256 _amount, uint256 _noOfTokens) public {
+    function depositToken(
+        address tokenOwner,
+        uint256 _tokenID,
+        uint256 _amount,
+        uint256 _noOfTokens
+    ) public {
         Transaction memory txn;
-
         txn.id = _transactionIdCounter.current();
         txn.tokenID = _tokenID;
         txn.amount = _amount;
         txn.noOfTokens = _noOfTokens;
-        txn.seller = payable(sellerAddress);
-        txn.buyer = payable(msg.sender);
+        txn.seller = payable(tokenOwner);
         txn.transactionStatus = Status.DEPOSITE;
 
-        ERC1155(ERC1155Address).safeTransferFrom(sellerAddress, address(this), txn.tokenID, txn.noOfTokens, "");
+        ERC1155(ERC1155Address).safeTransferFrom(
+            tokenOwner,
+            address(this),
+            txn.tokenID,
+            txn.noOfTokens,
+            ""
+        );
         transactionArray[txn.id] = txn;
         _transactionIdCounter.increment();
-        
+
         emit TokenDepoisted(_tokenID, _amount);
     }
 
-    function cancelBeforePayment(uint256 _transactionId) public currentStatus(Status.DEPOSITE, _transactionId) onlySeller(_transactionId)
-    {
+    function depositETH(
+        uint256 _transactionId
+    ) public payable currentStatus(Status.DEPOSITE, _transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
-        ERC1155(ERC1155Address).safeTransferFrom(address(this), msg.sender, txn.tokenID, txn.noOfTokens, "");
-        sellerCancel = true;
-        txn.transactionStatus = Status.WITHDRAWED;
-    }
-
-    function depositETH(uint256 _transactionId) public payable currentStatus(Status.DEPOSITE, _transactionId) {
-        Transaction memory txn = transactionArray[_transactionId];
-        require(txn.amount == msg.value, "Amount must to equal to selling price of the property.");
+        require(
+            txn.amount * (10 ** 18) == msg.value,
+            "Amount must to equal to selling price of the property."
+        );
         txn.buyer = payable(msg.sender);
         txn.transactionStatus = Status.PAYMENT;
+        transactionArray[_transactionId] = txn;
     }
 
-    function cancelBeforeDelivery(uint256 _transactionId) public payable currentStatus(Status.PAYMENT,_transactionId) BuyerOrSeller(_transactionId)
-    {
+    function cancelTransaction(
+        uint256 _transactionId
+    ) public payable BuyerOrSeller(_transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
         if (msg.sender == txn.seller) {
-            sellerCancel = true;
-            txn.transactionStatus = Status.WITHDRAWED;
-        } else {
-            buyerCancel = true;
-            txn.transactionStatus = Status.REFUND;
-        }
-
-        if (sellerCancel == true && buyerCancel == true) {
+            txn.sellerCancel = true;
             ERC1155(ERC1155Address).safeTransferFrom(
                 address(this),
-                txn.seller,
+                address(msg.sender),
                 txn.tokenID,
                 txn.noOfTokens,
                 ""
             );
-            txn.buyer.transfer(txn.amount);
-            txn.transactionStatus = Status.CLOSED;
+            txn.transactionStatus = Status.WITHDRAWED;
+        } else {
+            txn.buyerCancel = true;
         }
-        else{
-            txn.transactionStatus = Status.DISPUTTED;
+
+        if (txn.buyer != address(0x0)) {
+            if (txn.sellerCancel && txn.buyerCancel) {
+                ERC1155(ERC1155Address).safeTransferFrom(
+                    address(this),
+                    txn.seller,
+                    txn.tokenID,
+                    txn.noOfTokens,
+                    ""
+                );
+                txn.buyer.transfer(txn.amount);
+                txn.transactionStatus = Status.CLOSED;
+                txn.buyer = payable(address(0x0));
+                txn.buyerCancel = false;
+                txn.sellerCancel = false;
+            } else {
+                txn.transactionStatus = Status.DISPUTTED;
+            }
         }
+        transactionArray[_transactionId] = txn;
     }
 
-    function initiateDelivery(uint256 _transactionId) public currentStatus(Status.PAYMENT, _transactionId) onlySeller(_transactionId) noDispute(_transactionId)
+    function refundBuyer(
+        uint256 _transactionId
+    ) public onlySeller(_transactionId) {
+        Transaction memory txn = transactionArray[_transactionId];
+        payable(txn.seller).transfer((txn.amount * (10 ** 18)));
+
+        //require(success, "Failed to refund to buyer.");
+        txn.transactionStatus = Status.REFUND;
+        transactionArray[_transactionId] = txn;
+    }
+
+    function resale(
+        uint256 _transactionId
+    )
+        public
+        currentStatus(Status.REFUND, _transactionId)
+        onlySeller(_transactionId)
+    {
+        transactionArray[_transactionId].buyerCancel = false;
+        transactionArray[_transactionId].transactionStatus = Status.DEPOSITE;
+    }
+
+    function initiateDelivery(
+        uint256 _transactionId
+    )
+        public
+        currentStatus(Status.PAYMENT, _transactionId)
+        onlySeller(_transactionId)
+        noDispute(_transactionId)
     {
         transactionArray[_transactionId].transactionStatus = Status.DELIVERY;
     }
 
-    function confirmDelivery(uint256 _transactionId) public payable currentStatus(Status.DELIVERY, _transactionId) onlyBuyer(_transactionId)
+    function confirmDelivery(
+        uint256 _transactionId
+    )
+        public
+        payable
+        currentStatus(Status.DELIVERY, _transactionId)
+        onlyBuyer(_transactionId)
     {
         Transaction memory txn = transactionArray[_transactionId];
         ERC1155(ERC1155Address).safeTransferFrom(
@@ -123,16 +172,19 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
             txn.noOfTokens,
             ""
         );
-        payable(txn.seller).transfer(txn.amount);
+        payable(txn.seller).transfer((txn.amount * (10 ** 18)));
+        // require(success, "Failed to transfer amount to seller.");
         txn.transactionStatus = Status.CONFIRMED;
+        transactionArray[_transactionId] = txn;
     }
 
     function getBalance() public view returns (uint256 balance) {
         return address(this).balance;
     }
 
-    function getTransactionStatus(uint256 _transactionId) public view returns (string memory) {
-
+    function getTransactionStatus(
+        uint256 _transactionId
+    ) public view returns (string memory) {
         Status temp = transactionArray[_transactionId].transactionStatus;
         if (temp == Status.DEPOSITE) return "Tokens Deposited";
         else if (temp == Status.WITHDRAWED) return "Cancelled by seller";
@@ -143,16 +195,34 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         else return "In Dispute";
     }
 
-    function onERC1155Received( address operator, address from, uint256 id, uint256 value, bytes calldata data) external pure override returns (bytes4) {
-        return bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"));
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
+        return
+            bytes4(
+                keccak256(
+                    "onERC1155Received(address,address,uint256,uint256,bytes)"
+                )
+            );
     }
 
-    function onERC1155BatchReceived( address operator, address from, uint256[] calldata ids, uint256[] calldata values, bytes calldata data) external pure override returns (bytes4) {
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external pure returns (bool) {
         return true;
     }
 
@@ -170,13 +240,17 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     }
 
     modifier onlyBuyer(uint256 _transactionId) {
-        require(msg.sender == transactionArray[_transactionId].buyer, "Caller address is not the buyer.");
+        require(
+            msg.sender == transactionArray[_transactionId].buyer,
+            "Caller address is not the buyer."
+        );
         _;
     }
 
     modifier noDispute(uint256 _transactionId) {
         require(
-            buyerCancel == false && sellerCancel == false,
+            transactionArray[_transactionId].buyerCancel == false &&
+                transactionArray[_transactionId].sellerCancel == false,
             "Either buyer or seller cancelled deal."
         );
         _;
@@ -184,13 +258,14 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
 
     modifier BuyerOrSeller(uint256 _transactionId) {
         require(
-            msg.sender == transactionArray[_transactionId].buyer || msg.sender == transactionArray[_transactionId].seller,
+            msg.sender == transactionArray[_transactionId].buyer ||
+                msg.sender == transactionArray[_transactionId].seller,
             "Caller is not buyer or seller."
         );
         _;
     }
 
-    modifier currentStatus(Status _state,uint256 _transactionId) {
+    modifier currentStatus(Status _state, uint256 _transactionId) {
         require(transactionArray[_transactionId].transactionStatus == _state);
         _;
     }
