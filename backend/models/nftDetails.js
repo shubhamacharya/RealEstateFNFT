@@ -1,0 +1,38 @@
+const mongoose = require('mongoose');
+const nftDetails = mongoose.Schema({
+    tokenId: {
+        type: String,
+        //unique: true
+    },
+    name: {
+        type: String
+    },
+    tokenImg: {
+        type: String
+    },
+    tokenURI: {
+        type: String,
+        //required: true, // [true, "Please Enter the Token URI"],
+    },
+    price: {
+        type: Number,
+        //required: true, //[true, "Please Enter the Price"],
+    },
+    ownerAddress: {
+        type: String,
+        //required: true, //[true, "Please Enter the Email Address"],
+    },
+    txId: {
+        type: String,
+        //required: true, //[true, "Please Enter the trnsaction ID"],
+    },
+    blockNo: {
+        type: Number,
+        //require: true
+    },
+    eventData: {
+        type: {}
+    }
+})
+
+module.exports = mongoose.model('nftDetails', nftDetails);
