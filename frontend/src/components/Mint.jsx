@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import NavBar from "./NavBar";
 import { Button, Card, Form } from "react-bootstrap";
+import { useMutation } from "@apollo/client";
+import { MINT_RNFT } from "../mutations/Mutation";
 
 function Mint() {
+  const [mintNFT] = useMutation(MINT_RNFT);
   const handleImageUpload = (e) => {
     e.target.files.forEach((img) =>
       setImages(...images, URL.createObjectURL(img))
@@ -13,10 +16,18 @@ function Mint() {
   const [price, setPrice] = useState(0);
   const [ownerAddress, setOwnerAddress] = useState("");
   const [images, setImages] = useState([]);
+  const [tokenURI, setTokenURI] = useState("");
 
   const handleMinting = (e) => {
-    
-  } 
+    mintNFT(
+      name,
+      images[0],
+      tokenURI,
+      price,
+      ownerAddress,
+      localStorage.getItem("account")
+    );
+  };
 
   return (
     <>
@@ -43,11 +54,14 @@ function Mint() {
             </Form.Group>
             <Form.Group className="mb-3 sm" controlId="mintRNFTImages">
               <Form.Label>Images</Form.Label>
+              <Form.Control type="file" multiple onChange={handleImageUpload} />
+            </Form.Group>
+            <Form.Group className="mb-3 sm" controlId="mintRNFTURI">
+              <Form.Label>URI</Form.Label>
               <Form.Control
-                type="file"
-                multiple
-                placeholder="Name of the RNFT"
-                onChange={handleImageUpload}
+                type="text"
+                placeholder="URI of the RNFT"
+                onChange={(e) => setTokenURI(e.target.value)}
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="mintRNFTPrice">
