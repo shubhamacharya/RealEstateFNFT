@@ -1,6 +1,13 @@
-let Web3 = require('web3');
-const web3 = new Web3(Web3.givenProvider || process.env.PROVIDER);
-let RNFTContract, Escrow1155Contract;
+let { Web3 } = require('web3');
+require("dotenv").config({ path: "../.env" });
+const fsPromise = require('fs/promises');
+const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8545"));
+var RNFTContract, Escrow1155Contract;
+const abiDecoder = require('abi-decoder');
+
+const NFTDetails = require('../models/nftDetails');
+const FractionsDetails = require('../models/fractionsDetails');
+const Transactions = require('../models/transactions');
 
 const getABI = async (filePath) => {
     const data = await fsPromise.readFile(filePath, 'utf-8');
@@ -21,12 +28,39 @@ const deployContract = async (contractName) => {
 }
 
 const getContractObj = async (contractName) => {
-    if (`${contractName}Contract` === undefined) {
+    if (RNFTContract === undefined || Escrow1155Contract === undefined) {
         await deployContract(contractName);
     }
-    return `${contractName}Contract`;
+    return contractName === "RNFT" ? RNFTContract : Escrow1155Contract
 }
 
-const mintNFT = async () => {
-    
+const mintNFTCallout = async (args) => {
+    RNFTContract = await getContractObj("RNFT");
+    await RNFTContract.methods.setEscrowAddress(process.env.Escrow1155_CONTRACT_ADDRESS).send({ from: args.adminAddress });
+    await RNFTContract.methods.createNFT(args.ownerAddress, args.price).send({ from: args.adminAddress, gas: 1000000 });
+
+    let res = await RNFTContract.getPastEvents();
+    let nftReceipt = new NFTDetails();
+    let transactionReceipt = new Transactions();
+
+    nftReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
+    nftReceipt.name = args.name;
+    nftReceipt.tokenURI = args.tokenURI;
+    nftReceipt.price = parseInt(res[1].returnValues.price);
+    nftReceipt.ownerAddress = res[1].returnValues.to;
+    nftReceipt.blockNo = parseInt(res[1].blockNumber);
+    nftReceipt.txId = res[1].transactionHash;
+
+    transactionReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
+    transactionReceipt.quantity = parseInt(res[0].returnValues.value);
+    transactionReceipt.to = res[0].returnValues.to;
+    transactionReceipt.from = res[0].returnValues.from;
+    transactionReceipt.blockNumber = parseInt(res[0].returnValues.blockNumber);
+    transactionReceipt.txId = res[0].transactionHash;
+
+    await nftReceipt.save();
+    await transactionReceipt.save();
+    return res[0].transactionHash;
 }
+
+module.exports = { mintNFTCallout }
