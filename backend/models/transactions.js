@@ -18,19 +18,11 @@ const transactionDtails = mongoose.Schema({
     },
     from: {
         type: String,
-        required: true, //[true, "Please Enter the Email Address"],
-    },
-    txType: {
-        //make it enum / fixed values for Buy & Sell
-        type: String,
-        //required: true, //[true, "Please Enter the trnsaction ID"],
+        required: true,
     },
     blockNo: {
         type: Number,
         require: true
-    },
-    eventData: {
-        type: {}
     },
     txId: {
         type: String

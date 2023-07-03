@@ -29,9 +29,6 @@ const nftDetails = mongoose.Schema({
     blockNo: {
         type: Number,
         //require: true
-    },
-    eventData: {
-        type: {}
     }
 })
 
