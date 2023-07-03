@@ -4,13 +4,16 @@ const { GraphQLObjectType,
     GraphQLScalarType,
     GraphQLNonNull,
     GraphQLInt,
-    GraphQLSchema, GraphQLEnumType
+    GraphQLSchema,
+    GraphQLList,
+    GraphQLEnumType
 } = require("graphql");
 
 const NFTDetails = require('../models/nftDetails');
 const FractionsDetails = require('../models/fractionsDetails');
 const Transactions = require('../models/transactions');
 const Users = require("../models/userDetails");
+const { mintNFTCallout } = require("../utils/web3Callouts");
 
 // Users Type
 const UsersType = new GraphQLObjectType({
@@ -64,13 +67,13 @@ const nftDetailsType = new GraphQLObjectType({
 });
 
 const RootQuery = new GraphQLObjectType({
-    name: 'RootQueryType',
+    name: 'RootQuery',
     fields: {
-        nft: {
-            type: nftDetailsType,
-            args: { tokenId: { type: GraphQLInt } },
-            resolve(parent, args) {
-                return NFTDetails.find({ tokenId: args.tokenId })
+        collectionsOfUser: {
+            type: new GraphQLList(nftDetailsType),
+            args: { ownerAddress: { type: GraphQLString } },
+            async resolve(parent, args) {
+                return await NFTDetails.find({ ownerAddress: args.ownerAddress }).exec()
             }
         }
     }
@@ -87,14 +90,15 @@ const mutation = new GraphQLObjectType({
                 tokenURI: { type: new GraphQLNonNull(GraphQLString) },
                 price: { type: new GraphQLNonNull(GraphQLInt) },
                 ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+                adminAddress: { type: new GraphQLNonNull(GraphQLString) },
             },
-            resolve(parent, args) {
-                let res = NFTDetails.save();
+            async resolve(parent, args) {
+                await mintNFTCallout(args);
             }
         },
         users: {
             type: UsersType,
-            args: { email: { type: GraphQLString }, password: { type: GraphQLString } },
+            args: { email: { type: new GraphQLNonNull(GraphQLString) }, password: { type: new GraphQLNonNull(GraphQLString) } },
             async resolve(parent, args) {
                 return Users.findOne({ email: args.email, password: args.password })
             }
