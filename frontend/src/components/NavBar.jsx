@@ -1,6 +1,7 @@
 import React from "react";
-import { Container, Nav, Navbar } from "react-bootstrap";
+import { Button, Container, Nav, Navbar } from "react-bootstrap";
 import { useLocation } from "react-router-dom";
+import { connect } from "../utils/walletConnect";
 
 function NavBar() {
   let location = useLocation();
@@ -12,6 +13,11 @@ function NavBar() {
           <Nav.Link href="/home">Home</Nav.Link>
           {location?.state?.role === "admin" && (
             <Nav.Link href="/mint">Mint</Nav.Link>
+          )}
+          {localStorage.getItem("account") ? (
+            <Navbar.Text>{localStorage.getItem("account")}</Navbar.Text>
+          ) : (
+            <Button onClick={connect}></Button>
           )}
         </Nav>
       </Container>
