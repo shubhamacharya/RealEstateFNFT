@@ -3,30 +3,46 @@ import NavBar from "./NavBar";
 import { Button, Card, Form } from "react-bootstrap";
 import { useMutation } from "@apollo/client";
 import { MINT_RNFT } from "../mutations/Mutation";
+import { create } from "ipfs-http-client";
 
 function Mint() {
   const [mintNFT] = useMutation(MINT_RNFT);
-  const handleImageUpload = (e) => {
-    e.target.files.forEach((img) =>
-      setImages(...images, URL.createObjectURL(img))
-    );
-  };
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState(0);
   const [ownerAddress, setOwnerAddress] = useState("");
-  const [images, setImages] = useState([]);
+  const [imageURI, setImageURI] = useState("");
+  const [imagesObj, setImagesObj] = useState([]);
   const [tokenURI, setTokenURI] = useState("");
 
-  const handleMinting = (e) => {
-    mintNFT(
-      name,
-      images[0],
-      tokenURI,
-      price,
-      ownerAddress,
-      localStorage.getItem("account")
-    );
+  const handleMinting = async (e) => {
+    const ipfs = create(new URL("http://127.0.0.1:5001"));
+
+    // Create Direcotry
+    await ipfs.files.mkdir(`/RNFT/images/${name}`, { parents: true });
+
+    for (const file of imagesObj) {
+      await ipfs.files.write(
+        `/RNFT/images/${name}/${name}_${file.name}`,
+        file,
+        {
+          create: true,
+        }
+      );
+    }
+    setImageURI((await ipfs.files.stat(`/RNFT/images/${name}`)).cid.toString());
+
+    const adminAccount = localStorage.getItem("account");
+    await mintNFT({
+      variables: {
+        name: name,
+        images: imageURI,
+        tokenURI: tokenURI,
+        price: parseInt(price),
+        ownerAddress: ownerAddress,
+        adminAddress: adminAccount,
+      },
+    });
   };
 
   return (
@@ -36,7 +52,7 @@ function Mint() {
         className="position-absolute top-50 start-50 translate-middle"
         style={{ width: "20rem", height: "auto" }}
       >
-        <Card.Header className="text-center ">Login</Card.Header>
+        <Card.Header className="text-center ">Mint NFT</Card.Header>
         <Card.Body>
           <Form
             onSubmit={async (e) => {
@@ -54,7 +70,11 @@ function Mint() {
             </Form.Group>
             <Form.Group className="mb-3 sm" controlId="mintRNFTImages">
               <Form.Label>Images</Form.Label>
-              <Form.Control type="file" multiple onChange={handleImageUpload} />
+              <Form.Control
+                type="file"
+                multiple
+                onChange={(e) => setImagesObj(e.target.files)}
+              />
             </Form.Group>
             <Form.Group className="mb-3 sm" controlId="mintRNFTURI">
               <Form.Label>URI</Form.Label>
