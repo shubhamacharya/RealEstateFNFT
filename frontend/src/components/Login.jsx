@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Card, Form, Spinner, Button } from "react-bootstrap";
+import { Card, Form, Button } from "react-bootstrap";
 import { useMutation } from "@apollo/client";
-import { GET_USER } from "../mutations/Mutation";
+import { GET_USER } from "../mutations/Mutation.js";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
