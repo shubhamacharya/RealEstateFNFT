@@ -13,7 +13,7 @@ const GET_USER = gql`
 const MINT_RNFT = gql`
     mutation mintNFT($name:String!,$images:String!,$tokenURI:String!,$price:Int!,$ownerAddress:String!,$adminAddress:String!) {
         mintNFT(name: $name,images: $images,tokenURI:$tokenURI,price:$price,ownerAddress:$ownerAddress,adminAddress:$adminAddress){
-            name
+            txId
         }
     }
 `;
