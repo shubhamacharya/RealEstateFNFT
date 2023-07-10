@@ -93,7 +93,8 @@ const mutation = new GraphQLObjectType({
                 adminAddress: { type: new GraphQLNonNull(GraphQLString) },
             },
             async resolve(parent, args) {
-                await mintNFTCallout(args);
+                let txId = await mintNFTCallout(args);
+                return await NFTDetails.findOne({ txId })
             }
         },
         users: {
