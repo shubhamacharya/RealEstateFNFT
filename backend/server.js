@@ -9,7 +9,8 @@ const PORT = process.env.GQL_PORT || 4000;
 
 const app = express();
 
-app.use(cors());
+app.use(cors({origin:'http://localhost:3000'}));
+
 app.use('/graphql', graphqlHTTP({ schema: schema, graphiql: true }));
 app.listen(PORT, async () => {
     //Connect to DB
