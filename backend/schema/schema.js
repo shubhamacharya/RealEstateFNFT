@@ -56,7 +56,7 @@ const nftDetailsType = new GraphQLObjectType({
         id: { type: GraphQLID },
         tokenId: { type: GraphQLInt },
         name: { type: GraphQLString },
-        image: { type: GraphQLString },
+        tokenImg: { type: GraphQLString },
         tokenURI: { type: GraphQLString },
         price: { type: GraphQLInt },
         ownerAddress: { type: GraphQLString },
@@ -73,7 +73,8 @@ const RootQuery = new GraphQLObjectType({
             type: new GraphQLList(nftDetailsType),
             args: { ownerAddress: { type: GraphQLString } },
             async resolve(parent, args) {
-                return await NFTDetails.find({ ownerAddress: args.ownerAddress }).exec()
+                let res = await NFTDetails.find({ ownerAddress: args.ownerAddress.toLowerCase() }).exec();
+                return res
             }
         }
     }
