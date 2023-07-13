@@ -12,6 +12,7 @@ import Login from './components/Login';
 import Home from './components/Home';
 import './App.css';
 import Mint from './components/Mint';
+import Collections from './components/Collections';
 
 const errorLink = onError(({ graphqlErrors, networkError }) => {
   if (graphqlErrors) {
@@ -41,6 +42,7 @@ function App() {
             <Route index path="/" element={<Login />}></Route>
             <Route path="/home" element={<Home />}></Route>
             <Route path="/mint" element={<Mint />}></Route>
+            <Route path="/myCollection" element={<Collections />}></Route>
           </Routes>
         </Router>
       </ApolloProvider>
