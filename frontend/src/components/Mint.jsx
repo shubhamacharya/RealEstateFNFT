@@ -3,7 +3,7 @@ import NavBar from "./NavBar";
 import { Button, Card, Form } from "react-bootstrap";
 import { useMutation } from "@apollo/client";
 import { MINT_RNFT } from "../mutations/Mutation";
-import { create } from "ipfs-http-client";
+import { uploadImageToIPFS } from "../utils/ipfsOp";
 
 function Mint() {
   const [mintNFT] = useMutation(MINT_RNFT);
@@ -11,32 +11,18 @@ function Mint() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState(0);
   const [ownerAddress, setOwnerAddress] = useState("");
-  const [imageURI, setImageURI] = useState("");
+  // const [imageURI, setImageURI] = useState("");
   const [imagesObj, setImagesObj] = useState([]);
   const [tokenURI, setTokenURI] = useState("");
 
   const handleMinting = async (e) => {
-    const ipfs = create(new URL("http://127.0.0.1:5001"));
-
-    // Create Direcotry
-    await ipfs.files.mkdir(`/RNFT/images/${name}`, { parents: true });
-
-    for (const file of imagesObj) {
-      await ipfs.files.write(
-        `/RNFT/images/${name}/${name}_${file.name}`,
-        file,
-        {
-          create: true,
-        }
-      );
-    }
-    setImageURI((await ipfs.files.stat(`/RNFT/images/${name}`)).cid.toString());
+    let tempImageURI = await uploadImageToIPFS(name, imagesObj);
 
     const adminAccount = localStorage.getItem("account");
     await mintNFT({
       variables: {
         name: name,
-        images: imageURI,
+        images: tempImageURI.cid.toString(),
         tokenURI: tokenURI,
         price: parseInt(price),
         ownerAddress: ownerAddress,
