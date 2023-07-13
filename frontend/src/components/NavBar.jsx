@@ -14,6 +14,7 @@ function NavBar() {
           {location?.state?.role === "admin" && (
             <Nav.Link href="/mint">Mint</Nav.Link>
           )}
+          <Nav.Link href="/myCollection">Collection</Nav.Link>
           {localStorage.getItem("account") ? (
             <Navbar.Text>{localStorage.getItem("account")}</Navbar.Text>
           ) : (
