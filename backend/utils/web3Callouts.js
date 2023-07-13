@@ -47,14 +47,15 @@ const mintNFTCallout = async (args) => {
     nftReceipt.name = args.name;
     nftReceipt.tokenURI = args.tokenURI;
     nftReceipt.price = parseInt(res[1].returnValues.price);
-    nftReceipt.ownerAddress = res[1].returnValues.to;
+    nftReceipt.ownerAddress = res[1].returnValues.to.toLowerCase();
     nftReceipt.blockNo = parseInt(res[1].blockNumber);
     nftReceipt.txId = res[1].transactionHash;
+    nftReceipt.tokenImg = args.images;
 
     transactionReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
     transactionReceipt.quantity = parseInt(res[0].returnValues.value);
-    transactionReceipt.to = res[0].returnValues.to;
-    transactionReceipt.from = res[0].returnValues.from;
+    transactionReceipt.to = res[0].returnValues.to.toLowerCase();
+    transactionReceipt.from = res[0].returnValues.from.toLowerCase();
     transactionReceipt.blockNumber = parseInt(res[0].returnValues.blockNumber);
     transactionReceipt.txId = res[0].transactionHash;
 
