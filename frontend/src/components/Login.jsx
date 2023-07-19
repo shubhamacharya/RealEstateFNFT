@@ -18,6 +18,7 @@ export default function Login() {
       let res = await loginUser({
         variables: { email: email, password: password },
       });
+      localStorage.setItem("role",res.data.users.role);
       navigate("/home", { state: { role: res.data.users.role } });
     }
   };

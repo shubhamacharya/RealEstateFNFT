@@ -3,6 +3,7 @@ import { Container } from "react-bootstrap";
 import NavBar from "./NavBar";
 
 function Home() {
+  
   return (
     <>
       <NavBar />
