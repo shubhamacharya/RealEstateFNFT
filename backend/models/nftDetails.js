@@ -22,6 +22,10 @@ const nftDetails = mongoose.Schema({
         type: String,
         //required: true, //[true, "Please Enter the Email Address"],
     },
+    forSale: {
+        type: Boolean,
+        default: false
+    },
     txId: {
         type: String,
         //required: true, //[true, "Please Enter the trnsaction ID"],
