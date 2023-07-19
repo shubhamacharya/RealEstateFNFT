@@ -74,15 +74,6 @@ function Mint() {
                 onChange={(e) => setImagesObj(e.target.files)}
               />
             </Form.Group>
-            {/* <Form.Group className="mb-3 sm" controlId="mintRNFTURI">
-              <Form.Label>URI</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="URI of the RNFT"
-                value={tokenURI}
-                onChange={(e) => setTokenURI(e.target.value)}
-              />
-            </Form.Group> */}
             <Form.Group className="mb-3" controlId="mintRNFTPrice">
               <Form.Label>Price</Form.Label>
               <Form.Control
