@@ -64,4 +64,28 @@ const mintNFTCallout = async (args) => {
     return res[0].transactionHash;
 }
 
-module.exports = { mintNFTCallout }
+const sellNFTCallout = async (args) => {
+    RNFTContract = await getContractObj("RNFT");
+    let transactionReceipt = new Transactions();
+
+    await RNFTContract.methods.sellToken(args.tokenId).send({ from: args.ownerAddress, gas: 1000000 })
+
+    let res = await RNFTContract.getPastEvents();
+    if (res[0]["returnValues"]["2"]) {
+        let nftReceipt = await NFTDetails.findOne({ tokenId: args.tokenId })
+
+        nftReceipt.forSale = true;
+        transactionReceipt.tokenId = parseInt(res[2].returnValues.id);
+        transactionReceipt.quantity = parseInt(res[2].returnValues.value);
+        transactionReceipt.to = res[2].returnValues.to.toLowerCase();
+        transactionReceipt.from = res[2].returnValues.from.toLowerCase();
+        transactionReceipt.blockNumber = parseInt(res[2].blockNumber);
+        transactionReceipt.txId = res[2].transactionHash;
+
+        await nftReceipt.save();
+        await transactionReceipt.save();
+        return res[2].transactionHash;
+    }
+}
+
+module.exports = { mintNFTCallout, sellNFTCallout }
