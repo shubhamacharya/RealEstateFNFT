@@ -18,4 +18,12 @@ const MINT_RNFT = gql`
     }
 `;
 
-export { GET_USER, MINT_RNFT }
+const SELL_NFT = gql`
+    mutation sellNFT($tokenId: Int!, $ownerAddress:String!){
+        sellNFT(tokenId: $tokenId, ownerAddress: $ownerAddress){
+            txId
+        }
+    }
+`
+
+export { GET_USER, MINT_RNFT, SELL_NFT }
