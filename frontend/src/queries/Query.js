@@ -17,4 +17,13 @@ const GET_USER_COLLECTIONS = gql`
     }
 `;
 
+const GET_FNFT_OF_NFT = gql`
+    query fnftOfUsers($NFTId : Int!) {
+        fnftOfUsers(NFTId: $NFTId){
+            quantity,
+            tokenOwners
+        }
+    }
+`;
+
 export { GET_USER_COLLECTIONS }
