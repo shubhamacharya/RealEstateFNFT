@@ -13,7 +13,7 @@ const NFTDetails = require('../models/nftDetails');
 const FractionsDetails = require('../models/fractionsDetails');
 const Transactions = require('../models/transactions');
 const Users = require("../models/userDetails");
-const { mintNFTCallout } = require("../utils/web3Callouts");
+const { mintNFTCallout, sellNFTCallout } = require("../utils/web3Callouts");
 
 // Users Type
 const UsersType = new GraphQLObjectType({
@@ -66,6 +66,19 @@ const nftDetailsType = new GraphQLObjectType({
     })
 });
 
+// FNFT Details
+const fnftDetailsType = new GraphQLObjectType({
+    name: 'FNFTDetails',
+    fields: () => ({
+        id: { type: GraphQLID },
+        NFTId: { type: GraphQLInt },
+        quantity: { type: GraphQLInt },
+        tokenOwners: { type: new GraphQLList(GraphQLString) },
+        txId: { type: GraphQLString },
+        blockNo: { type: GraphQLInt }
+    })
+});
+
 const RootQuery = new GraphQLObjectType({
     name: 'RootQuery',
     fields: {
@@ -76,6 +89,14 @@ const RootQuery = new GraphQLObjectType({
                 let res = await NFTDetails.find({ ownerAddress: args.ownerAddress.toLowerCase() }).exec();
                 return res
             }
+        },
+        fnftOfUsers: {
+            type: fnftDetailsType,
+            args: { NFTId: { type: GraphQLInt } },
+            async resolve(parent, args) {
+                let res = await FractionsDetails.findOne({ NFTId: args.NFTId }).exec();
+                return res
+            }
         }
     }
 });
@@ -83,6 +104,7 @@ const RootQuery = new GraphQLObjectType({
 const mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
+        // To mint new NFT  
         mintNFT: {
             type: nftDetailsType,
             args: {
@@ -98,6 +120,7 @@ const mutation = new GraphQLObjectType({
                 return await NFTDetails.findOne({ txId })
             }
         },
+        // For login process
         users: {
             type: UsersType,
             args: { email: { type: new GraphQLNonNull(GraphQLString) }, password: { type: new GraphQLNonNull(GraphQLString) } },
@@ -105,6 +128,15 @@ const mutation = new GraphQLObjectType({
                 return Users.findOne({ email: args.email, password: args.password })
             }
         },
+        // To Sell NFT
+        sellNFT: {
+            type: nftDetailsType,
+            args: { tokenId: { type: new GraphQLNonNull(GraphQLInt) }, ownerAddress: { type: new GraphQLNonNull(GraphQLString) } },
+            async resolve(parent, args) {
+                let txId = await sellNFTCallout(args);
+                console.log(args);
+            }
+        }
     }
 });
 
