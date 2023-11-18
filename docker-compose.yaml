@@ -1,22 +1,10 @@
 version: "3.8"
 services:
-  backend:
-    build: ./backend
+  ganache:
+    image: trufflesuite/ganache-cli
     ports:
-      - 3000:3000
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@realestatefnft-database-1:27017/
-    depends_on: 
-      - database
-  frontend:
-    build: ./frontend
-    ports:
-      - 5000:5000
-    depends_on: 
-      - backend
-      - database
+      - 8545:8545
+  
   database:
     image: mongo:latest
     ports:
@@ -27,5 +15,24 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+  
+  frontend:
+    build: ./frontend
+    ports:
+      - 5000:5000
+    depends_on: 
+      - backend
+  
+  backend:
+    build: ./backend
+    ports:
+      - 4000:4000
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@realestatefnft-database-1:27017/
+    depends_on: 
+      - database
+      - ganache
 volumes:
   rnft:
