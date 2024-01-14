@@ -1,0 +1,8 @@
+.formInputGroup{
+    display: flex;
+    flex-direction: column;
+}
+
+.formControl{
+    margin-bottom: 20px;
+}

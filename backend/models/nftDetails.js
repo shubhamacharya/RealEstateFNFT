@@ -8,7 +8,7 @@ const nftDetails = mongoose.Schema({
         type: String
     },
     tokenImg: {
-        type: String
+        type: [String]
     },
     tokenURI: {
         type: String,

@@ -15,6 +15,7 @@ const Transactions = require('../models/transactions');
 const Users = require("../models/userDetails");
 const { mintNFTCallout, sellNFTCallout } = require("../utils/web3Callouts");
 
+
 // Users Type
 const UsersType = new GraphQLObjectType({
     name: 'User',
@@ -56,7 +57,8 @@ const nftDetailsType = new GraphQLObjectType({
         id: { type: GraphQLID },
         tokenId: { type: GraphQLInt },
         name: { type: GraphQLString },
-        tokenImg: { type: GraphQLString },
+        tokenImg: {type: new GraphQLList(GraphQLString) },
+        // tokenImg: { type: new FileList(new File) },
         tokenURI: { type: GraphQLString },
         price: { type: GraphQLInt },
         ownerAddress: { type: GraphQLString },
@@ -109,7 +111,8 @@ const mutation = new GraphQLObjectType({
             type: nftDetailsType,
             args: {
                 name: { type: new GraphQLNonNull(GraphQLString) },
-                images: { type: new GraphQLNonNull(GraphQLString) },
+                images: { type: new GraphQLNonNull(new GraphQLList(GraphQLString))},
+                // images: { type: new GraphQLNonNull(new GraphQLList(nftImagesList)) },
                 tokenURI: { type: new GraphQLNonNull(GraphQLString) },
                 price: { type: new GraphQLNonNull(GraphQLInt) },
                 ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
