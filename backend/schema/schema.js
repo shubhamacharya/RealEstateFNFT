@@ -57,7 +57,7 @@ const nftDetailsType = new GraphQLObjectType({
         id: { type: GraphQLID },
         tokenId: { type: GraphQLInt },
         name: { type: GraphQLString },
-        tokenImg: {type: new GraphQLList(GraphQLString) },
+        tokenImg: { type: new GraphQLList(GraphQLString) },
         // tokenImg: { type: new FileList(new File) },
         tokenURI: { type: GraphQLString },
         price: { type: GraphQLInt },
@@ -111,7 +111,7 @@ const mutation = new GraphQLObjectType({
             type: nftDetailsType,
             args: {
                 name: { type: new GraphQLNonNull(GraphQLString) },
-                images: { type: new GraphQLNonNull(new GraphQLList(GraphQLString))},
+                images: { type: new GraphQLNonNull(new GraphQLList(GraphQLString)) },
                 // images: { type: new GraphQLNonNull(new GraphQLList(nftImagesList)) },
                 tokenURI: { type: new GraphQLNonNull(GraphQLString) },
                 price: { type: new GraphQLNonNull(GraphQLInt) },
@@ -128,7 +128,31 @@ const mutation = new GraphQLObjectType({
             type: UsersType,
             args: { email: { type: new GraphQLNonNull(GraphQLString) }, password: { type: new GraphQLNonNull(GraphQLString) } },
             async resolve(parent, args) {
-                return Users.findOne({ email: args.email, password: args.password })
+                try {
+                    let users = await Users.findOne({ email: args.email }).exec()
+
+                    if (users == null) {
+                        console.log("inside")
+                        let user = new Users()
+                        console.log(user)
+                        user.email = args.email
+                        user.password = args.password
+                        user.role = "user"
+
+                        await user.save();
+                        return user
+                    }
+                    else if (users !== null && users.password !== args.password) {
+                        console.log("Wrong EmailId or password");
+                        return {"error": "wrong emailid or password"}
+                    }
+                    else {
+                        return users
+                    }
+                } catch (error) {
+                    console.log(error);
+                }
+
             }
         },
         // To Sell NFT
