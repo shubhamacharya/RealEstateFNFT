@@ -18,7 +18,7 @@ function LoginForm({ setFormData }) {
       });
     } else if (["regPasswd", "loginPasswd"].includes(e.target.name)) {
       setFormData((formData) => {
-        return { ...formData, passwd: e.target.value };
+        return { ...formData, password: e.target.value };
       });
     } else if (e.target.name === "regCnfPasswd") {
       setFormData((formData) => {

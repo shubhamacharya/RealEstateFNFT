@@ -126,15 +126,12 @@ const mutation = new GraphQLObjectType({
         // For login process
         users: {
             type: UsersType,
-            args: { email: { type: new GraphQLNonNull(GraphQLString) }, password: { type: new GraphQLNonNull(GraphQLString) } },
+            args: { email: { type: new GraphQLNonNull(GraphQLString) }, password: { type: new GraphQLNonNull(GraphQLString) }, operation: { type: new GraphQLNonNull(GraphQLString) } },
             async resolve(parent, args) {
                 try {
                     let users = await Users.findOne({ email: args.email }).exec()
-
-                    if (users == null) {
-                        console.log("inside")
+                    if (users == null && args.operation.toLowerCase() === "register" ) {
                         let user = new Users()
-                        console.log(user)
                         user.email = args.email
                         user.password = args.password
                         user.role = "user"
@@ -142,9 +139,13 @@ const mutation = new GraphQLObjectType({
                         await user.save();
                         return user
                     }
-                    else if (users !== null && users.password !== args.password) {
+                    else if (users == null && args.operation.toLowerCase() === "login"){
+                        console.log("User does not exists. Please register user")
+                        return {"error": "User does not exists. Please register user" }
+                    }
+                    else if (users !== null && users.password !== args.password && args.operation.toLowerCase() === "login") {
                         console.log("Wrong EmailId or password");
-                        return {"error": "wrong emailid or password"}
+                        return { "error": "wrong emailid or password" }
                     }
                     else {
                         return users
