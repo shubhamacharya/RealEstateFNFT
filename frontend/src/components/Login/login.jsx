@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
@@ -6,11 +7,12 @@ import { Button, Card } from "react-bootstrap";
 import LoginForm from "../LoginForm/LoginForm";
 import { updateButtonMsg } from "./loginSlice";
 import "./login.css";
-import { useMutation } from "@apollo/client";
 import { GET_USER } from "../../mutations/Mutation";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import Cookies from "js-cookie";
 
-function Login() {
+function Login({setLoggedIn}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { buttonMsg, actionButtonMsg } = useSelector((state) => state.login);
@@ -19,8 +21,6 @@ function Login() {
     password: "",
     cnfPasswd: "",
   });
-
-  const [loginUser, { data, error }] = useMutation(GET_USER);
 
   useEffect(() => {
     handleButtonMsg();
@@ -34,17 +34,29 @@ function Login() {
   const handleAction = async (event) => {
     event.preventDefault();
     try {
-      const { data } = await loginUser({
-        variables: {
-          email: formData.email,
-          password: formData.password,
-          operation: actionButtonMsg,
+      const {
+        data: { data },
+      } = await axios({
+        method: "post",
+        url: process.env.REACT_APP_GRAPHQL_URL,
+        data: {
+          query: GET_USER,
+          variables: {
+            email: formData.email,
+            password: formData.password,
+            operation: actionButtonMsg,
+          },
         },
       });
-      if (data.users.email !== null) {
-        window.localStorage.setItem("users", JSON.stringify(data.users));
-        console.log(window.localStorage.getItem("users"));
-        return navigate('/collections')
+      if (data.users.email !== null && actionButtonMsg === "Login") {
+        // window.localStorage.setItem("users", JSON.stringify(data.users.token));
+        Cookies.set("jwt", JSON.stringify(data.users.token), {
+          expires: 0.0416667,
+        });
+        setLoggedIn(true);
+        return navigate("/home");
+      } else {
+        return navigate("/login");
       }
     } catch (error) {
       console.error(error.message);

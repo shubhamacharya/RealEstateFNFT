@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 const GET_USER_COLLECTIONS = gql`
     query collectionsOfUser($ownerAddress: String!) {
         collectionsOfUser(ownerAddress: $ownerAddress){
-            id,
+            _id,
             tokenId,
             name,
             tokenImg,

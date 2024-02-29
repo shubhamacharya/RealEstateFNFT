@@ -1,0 +1,10 @@
+.btn-primary {
+    --bs-btn-color: #ffff;
+    --bs-btn-active-color: #ffff;
+    --bs-btn-disable-color: #ffff;
+}
+
+.btn {
+   --bs-btn-padding-y: 0.5rem;
+   --bs-btn-padding-x: 0.3rem; 
+}
