@@ -8,7 +8,8 @@ const { GraphQLObjectType,
     GraphQLList,
     GraphQLEnumType
 } = require("graphql");
-
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const NFTDetails = require('../models/nftDetails');
 const FractionsDetails = require('../models/fractionsDetails');
 const Transactions = require('../models/transactions');
@@ -20,11 +21,12 @@ const { mintNFTCallout, sellNFTCallout } = require("../utils/web3Callouts");
 const UsersType = new GraphQLObjectType({
     name: 'User',
     fields: () => ({
-        id: { type: GraphQLID },
+        _id: { type: GraphQLID },
         name: { type: GraphQLString },
         email: { type: GraphQLString },
         role: { type: GraphQLString },
-        password: { type: GraphQLString }
+        password: { type: GraphQLString },
+        token: {type: GraphQLString}
     })
 })
 
@@ -54,7 +56,7 @@ const EventType = new GraphQLScalarType({
 const nftDetailsType = new GraphQLObjectType({
     name: 'NFTDetails',
     fields: () => ({
-        id: { type: GraphQLID },
+        _id: { type: GraphQLID },
         tokenId: { type: GraphQLInt },
         name: { type: GraphQLString },
         tokenImg: { type: new GraphQLList(GraphQLString) },
@@ -72,7 +74,7 @@ const nftDetailsType = new GraphQLObjectType({
 const fnftDetailsType = new GraphQLObjectType({
     name: 'FNFTDetails',
     fields: () => ({
-        id: { type: GraphQLID },
+        _id: { type: GraphQLID },
         NFTId: { type: GraphQLInt },
         quantity: { type: GraphQLInt },
         tokenOwners: { type: new GraphQLList(GraphQLString) },
@@ -123,6 +125,7 @@ const mutation = new GraphQLObjectType({
                 return await NFTDetails.findOne({ txId })
             }
         },
+
         // For login process
         users: {
             type: UsersType,
@@ -130,24 +133,31 @@ const mutation = new GraphQLObjectType({
             async resolve(parent, args) {
                 try {
                     let users = await Users.findOne({ email: args.email }).exec()
-                    if (users == null && args.operation.toLowerCase() === "register" ) {
+                    if (users == null && args.operation.toLowerCase() === "register") {
                         let user = new Users()
                         user.email = args.email
-                        user.password = args.password
+                        user.password = await bcrypt.hash(args.password, 10)
                         user.role = "user"
 
                         await user.save();
                         return user
                     }
-                    else if (users == null && args.operation.toLowerCase() === "login"){
-                        console.log("User does not exists. Please register user")
-                        return {"error": "User does not exists. Please register user" }
+                    else if (users !== null && args.operation.toLowerCase() === "register"){
+                        console.log("User exists. Please login")
+                        return { "error": "User exists. Please login" }
                     }
-                    else if (users !== null && users.password !== args.password && args.operation.toLowerCase() === "login") {
+                    else if (users == null && args.operation.toLowerCase() === "login") {
+                        console.log("User does not exists. Please register user")
+                        return { "error": "User does not exists. Please register user" }
+                    }
+                    else if (users !== null && !await bcrypt.compare(args.password, users.password) && args.operation.toLowerCase() === "login") {
                         console.log("Wrong EmailId or password");
                         return { "error": "wrong emailid or password" }
                     }
                     else {
+                        users.token = jwt.sign({ userId: users._id, email: users.email, role: users.role }, process.env.JWT_SECRET, {
+                            expiresIn: '1h',
+                        });
                         return users
                     }
                 } catch (error) {
