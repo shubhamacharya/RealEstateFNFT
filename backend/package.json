@@ -12,15 +12,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@helia/mfs": "^3.0.1",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@openzeppelin/contracts": "^4.9.1",
     "@types/graphql-upload": "^16.0.5",
     "abi-decoder": "^2.4.0",
     "bcrypt": "^5.1.1",
+    "blockstore-fs": "^1.1.10",
     "body-parser": "^1.20.2",
     "chai": "^4.3.7",
     "cors": "^2.8.5",
+    "datastore-level": "^10.1.7",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-graphql": "^0.12.0",
@@ -33,6 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "mocha": "^10.2.0",
     "mongoose": "^8.0.2",
+    "multiaddr": "^10.0.1",
     "web3": "^4.0.2",
     "ws": "^8.14.2"
   }
