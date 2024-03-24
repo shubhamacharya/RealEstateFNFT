@@ -1,47 +1,231 @@
 /* eslint-disable react/prop-types */
-import "./NavBar.css";
-import Container from "react-bootstrap/Container";
-import Nav from "react-bootstrap/Nav";
-import Navbar from "react-bootstrap/Navbar";
-import UserAvatar from "../UserAvatar/UserAvatar";
-// import { useEffect, useState } from "react";
+import * as React from "react";
+import { styled, useTheme } from "@mui/material/styles";
+import Box from "@mui/material/Box";
+import Drawer from "@mui/material/Drawer";
+import CssBaseline from "@mui/material/CssBaseline";
+import MuiAppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import List from "@mui/material/List";
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import InboxIcon from "@mui/icons-material/MoveToInbox";
+import MailIcon from "@mui/icons-material/Mail";
+import { Avatar, Menu, MenuItem, Tooltip } from "@mui/material";
+import Login from "../Login/login";
+import { Navigate, useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
-function NavBar({ loggedIn, setLoggedIn }) {
-  console.log(`LoggedIn in Nav ==> `, loggedIn);
-  // const handleLogout = () => {
-  //   Cookies.remove("jwt");
-  //   setLoggedIn(false);
-  // };
+const drawerWidth = 240;
+
+const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
+  ({ theme, open }) => ({
+    flexGrow: 1,
+    padding: theme.spacing(3),
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    marginLeft: `-${drawerWidth}px`,
+    ...(open && {
+      transition: theme.transitions.create("margin", {
+        easing: theme.transitions.easing.easeOut,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
+      marginLeft: 0,
+    }),
+  })
+);
+
+const AppBar = styled(MuiAppBar, {
+  shouldForwardProp: (prop) => prop !== "open",
+})(({ theme, open }) => ({
+  transition: theme.transitions.create(["margin", "width"], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  backgroundColor: "#191825",
+
+  ...(open && {
+    width: `calc(100% - ${drawerWidth}px)`,
+    marginLeft: `${drawerWidth}px`,
+    transition: theme.transitions.create(["margin", "width"], {
+      easing: theme.transitions.easing.easeOut,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    backgroundColor: "#191825",
+  }),
+}));
+
+const DrawerHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: theme.spacing(0, 1),
+  ...theme.mixins.toolbar,
+  justifyContent: "flex-end",
+}));
+
+const NavBar = ({ loggedIn, setLoggedIn }) => {
+  const theme = useTheme();
+  const [open, setOpen] = React.useState(false);
+  const [anchorElUser, setAnchorElUser] = React.useState(null);
+  const settings = ["Profile", "Account", "Dashboard", "Logout"];
+  const mainOperations = ["Inbox", "Starred", "Send email", "Drafts"];
+  const otherOperations = ["All mail", "Trash", "Spam"];
+
+  const handleDrawerOpen = () => {
+    setOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setOpen(false);
+  };
+
+  const handleOpenUserMenu = (event) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
+  const handleSettings = (event) => {
+    switch (event.target.innerText.toLowerCase()) {
+      case "logout":
+        Cookies.remove("jwt");
+        setLoggedIn(false);
+        break;
+      case "profile":
+        break;
+      case "account":
+        break;
+      default:
+        break;
+    }
+    handleCloseUserMenu();
+  };
 
   return (
-    <Navbar
-      collapseOnSelect
-      expand="lg"
-      style={{ backgroundSize: "0", backgroundColor: "#292C33" }}
-      sticky="top"
-    >
-      <Container>
-        <Navbar.Brand>
-          <text>RNFT</text>
-        </Navbar.Brand>
-        <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-        <Navbar.Collapse id="responsive-navbar-nav">
-          <Nav>
-            <Nav.Link href="/">Home</Nav.Link>
-            <Nav.Link href="/collections">Collections</Nav.Link>
-            {loggedIn ? (
-              // <Nav.Link href="/" onClick={handleLogout}>
-              //   Logout
-              // </Nav.Link>
-              <UserAvatar username="John Doe" size={50}></UserAvatar>
+    <Box sx={{ flexGrow: 1 }}>
+      <CssBaseline />
+      <AppBar position="static" open={open}>
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            onClick={handleDrawerOpen}
+            hidden={!loggedIn}
+            edge="start"
+            sx={{ mr: 2, ...(open && { display: "none" }) }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            RNFT
+          </Typography>
+          {loggedIn ? (
+            <Box sx={{ flexGrow: 0 }}>
+              <Tooltip title="Open settings">
+                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                  <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+                </IconButton>
+              </Tooltip>
+              <Menu
+                sx={{ mt: "45px" }}
+                id="menu-appbar"
+                anchorEl={anchorElUser}
+                anchorOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={Boolean(anchorElUser)}
+                onClose={handleCloseUserMenu}
+              >
+                {settings.map((setting) => (
+                  <MenuItem
+                    key={setting}
+                    value={setting}
+                    onClick={handleSettings}
+                  >
+                    <Typography textAlign="center">{setting}</Typography>
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Box>
+          ) : (
+            <>
+              <Login setLoggedIn={setLoggedIn} />
+            </>
+          )}
+        </Toolbar>
+      </AppBar>
+      <Drawer
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+          },
+        }}
+        variant="persistent"
+        anchor="left"
+        open={open}
+      >
+        <DrawerHeader>
+          <IconButton onClick={handleDrawerClose}>
+            {theme.direction === "ltr" ? (
+              <ChevronLeftIcon />
             ) : (
-              <Nav.Link href="/login">Login</Nav.Link>
+              <ChevronRightIcon />
             )}
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+          </IconButton>
+        </DrawerHeader>
+        <Divider />
+        <List>
+          {mainOperations.map((text, index) => (
+            <ListItem key={text} disablePadding>
+              <ListItemButton>
+                <ListItemIcon>
+                  {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                </ListItemIcon>
+                <ListItemText primary={text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+        <Divider />
+        <List>
+          {otherOperations.map((text, index) => (
+            <ListItem key={text} disablePadding>
+              <ListItemButton>
+                <ListItemIcon>
+                  {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                </ListItemIcon>
+                <ListItemText primary={text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Drawer>
+      {/* <Main open={open}>
+        <DrawerHeader />
+      </Main> */}
+    </Box>
   );
-}
+};
 
 export default NavBar;

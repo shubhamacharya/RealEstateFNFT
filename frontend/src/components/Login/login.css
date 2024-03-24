@@ -1,8 +1,24 @@
 .loginContainer {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-top: 10%;
+  height: 100vh;
+  margin: 0;
+}
+
+.loginCard {
+  justify-content: center;
+  align-items: center;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.toggleButtonContainer {
+  width: 100%;
+  margin-top: 15px;
+  border: none;
+  background-color: transparent
 }
 
 .loginButtons {

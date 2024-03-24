@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 import React, { useState } from "react";
-import { Form } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import "./LoginForm.css";
 import { addRegister } from "./formInput";
+import { DialogContent, DialogContentText, TextField } from "@mui/material";
 
 function LoginForm({ setFormData }) {
   const dispatch = useDispatch();
@@ -24,65 +24,132 @@ function LoginForm({ setFormData }) {
       setFormData((formData) => {
         return { ...formData, cnfPasswd: e.target.value };
       });
+    } else if (e.target.name === "regFirstName") {
+      setFormData((formData) => {
+        return { ...formData, firstName: e.target.value };
+      });
+    } else if (e.target.name === "regLastName") {
+      setFormData((formData) => {
+        return { ...formData, lastName: e.target.value };
+      });
     }
   };
 
   return actionButtonMsg == "Login" ? (
-    <Form.Group className="mb-3 formInputGroup">
-      {/* <Form.Label>Email address</Form.Label> */}
-      <Form.Control
-        className="formControl"
-        type="email"
-        placeholder="Email address"
+    <DialogContent>
+      {/* <DialogContentText>
+        To subscribe to this website, please enter your email address here. We
+        will send updates occasionally.
+      </DialogContentText> */}
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="email"
         name="loginEmail"
+        label="Email Address"
+        type="email"
+        fullWidth
+        variant="standard"
         onChange={(event) => {
           event.preventDefault();
           handleChange(event);
         }}
       />
-      {/* <Form.Label>Password</Form.Label> */}
-      <Form.Control
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="password"
+        label="Password"
         type="password"
-        placeholder="Password"
+        fullWidth
+        variant="standard"
         name="loginPasswd"
         onChange={(event) => {
           event.preventDefault();
           handleChange(event);
         }}
       />
-    </Form.Group>
+    </DialogContent>
   ) : (
-    <Form.Group className="mb-3">
-      <Form.Control
-        className="formControl"
+    <DialogContent>
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="regFirstName"
+        label="First Name"
+        type="text"
+        fullWidth
+        variant="standard"
+        name="regFirstName"
+        onChange={(event) => {
+          event.preventDefault();
+          handleChange(event);
+        }}
+      />
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="regLastName"
+        label="Last Name"
+        type="text"
+        fullWidth
+        variant="standard"
+        name="regLastName"
+        onChange={(event) => {
+          event.preventDefault();
+          handleChange(event);
+        }}
+      />
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="regEmail"
+        label="Email address"
         type="email"
-        placeholder="Email address"
+        fullWidth
+        variant="standard"
         name="regEmail"
         onChange={(event) => {
           event.preventDefault();
           handleChange(event);
         }}
       />
-      <Form.Control
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="regPasswd"
+        label="Password"
         type="password"
-        className="formControl"
-        placeholder="Password"
+        fullWidth
+        variant="standard"
         name="regPasswd"
         onChange={(event) => {
           event.preventDefault();
           handleChange(event);
         }}
       />
-      <Form.Control
-        type="password"
-        placeholder="Confirm Password"
+      <TextField
+        autoFocus
+        required
+        margin="dense"
+        id="regCnfPasswd"
+        label="Confirm Password"
+        type="passworf"
+        fullWidth
+        variant="standard"
         name="regCnfPasswd"
         onChange={(event) => {
           event.preventDefault();
           handleChange(event);
         }}
       />
-    </Form.Group>
+    </DialogContent>
   );
 }
 

@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import NavBar from "./components/NavBar/NavBar";
 import Login from "./components/Login/login";
-import Collections from "./components/Collections/collections";
+// import Collections from "./components/Collections/collections";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 
@@ -14,24 +14,20 @@ function App() {
   }, [loggedIn]);
   return (
     <>
-      <NavBar
-        className="navbar"
-        loggedIn={loggedIn}
-        setLoggedIn={setLoggedIn}
-      />
+      <NavBar loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
       <Routes>
         <Route
           path="/login"
           element={<Login setLoggedIn={setLoggedIn}></Login>}
         ></Route>
-        <Route
+        {/*  <Route
           path="/home"
           element={<Collections isHome={true}></Collections>}
         ></Route>
         <Route
           path="/collections"
           element={<Collections></Collections>}
-        ></Route>
+        ></Route>*/}
       </Routes>
     </>
   );
