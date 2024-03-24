@@ -7,8 +7,8 @@ const schema = require("./schema/schema")
 const authenticateJWT = require("./utils/verifyJWT");
 const bodyParser = require("body-parser");
 
-const PORT = process.env.GQL_PORT || 4000;
-
+// const PORT = process.env.GQL_PORT || 4000;
+const PORT = 4000
 const app = express();
 // app.use(bodyParser.text());
 // app.use(bodyParser.urlencoded());

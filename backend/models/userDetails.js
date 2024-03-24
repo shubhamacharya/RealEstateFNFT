@@ -3,7 +3,10 @@ const userDetails = mongoose.Schema({
     id: {
         type: String
     },
-    name: {
+    firstname: {
+        type: String
+    },
+    lastname: {
         type: String
     },
     email: {

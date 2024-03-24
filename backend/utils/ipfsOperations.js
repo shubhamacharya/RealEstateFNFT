@@ -57,7 +57,13 @@ const createIPFSNode = async () => {
 const connectNode = async (ipfsNode, peerIds) => {
   const { multiaddr } = await import('multiaddr');
   peerIds.forEach(peerId => {
-    ipfsNode.libp2p.dial(multiaddr(peerId));
+    try {
+      ipfsNode.libp2p.dial(multiaddr(peerId));
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        console.log(`${peerId} not in running`)
+      }
+    }
   });
 }
 
@@ -152,12 +158,12 @@ const unpinContent = async (CIDs) => {
 }
 
 // Example usage
-readFolderContent(peerIds).then(imgs => {
-  // console.log(imgs);
-  let cids = imgs.map(img => img.path.toString());
-  console.log(cids);
-  // unpinContent(cids);
-})
+// readFolderContent(peerIds).then(imgs => {
+//   // console.log(imgs);
+//   let cids = imgs.map(img => img.path.toString());
+//   console.log(cids);
+//   // unpinContent(cids);
+// })
 
 
 module.exports = { uploadImageToIPFS, readFolderContent, unpinContent, pinContent };
