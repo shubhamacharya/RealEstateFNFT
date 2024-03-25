@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import * as React from "react";
-import { styled, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -19,31 +19,32 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
 import MailIcon from "@mui/icons-material/Mail";
-import { Avatar, Menu, MenuItem, Tooltip } from "@mui/material";
+import { Menu, MenuItem, Tooltip, styled } from "@mui/material";
 import Login from "../Login/login";
-import { Navigate, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import UserAvatar from "../UserAvatar/UserAvatar";
+import MintForm from "../MintForm/MintForm";
 
 const drawerWidth = 240;
 
-const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
-  ({ theme, open }) => ({
-    flexGrow: 1,
-    padding: theme.spacing(3),
-    transition: theme.transitions.create("margin", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    marginLeft: `-${drawerWidth}px`,
-    ...(open && {
-      transition: theme.transitions.create("margin", {
-        easing: theme.transitions.easing.easeOut,
-        duration: theme.transitions.duration.enteringScreen,
-      }),
-      marginLeft: 0,
-    }),
-  })
-);
+// const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
+//   ({ theme, open }) => ({
+//     flexGrow: 1,
+//     padding: theme.spacing(3),
+//     transition: theme.transitions.create("margin", {
+//       easing: theme.transitions.easing.sharp,
+//       duration: theme.transitions.duration.leavingScreen,
+//     }),
+//     marginLeft: `-${drawerWidth}px`,
+//     ...(open && {
+//       transition: theme.transitions.create("margin", {
+//         easing: theme.transitions.easing.easeOut,
+//         duration: theme.transitions.duration.enteringScreen,
+//       }),
+//       marginLeft: 0,
+//     }),
+//   })
+// );
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -52,7 +53,7 @@ const AppBar = styled(MuiAppBar, {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  backgroundColor: "#191825",
+  backgroundColor: "#1A1A2E",
 
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
@@ -61,7 +62,7 @@ const AppBar = styled(MuiAppBar, {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
-    backgroundColor: "#191825",
+    backgroundColor: `#1A1A2E`,
   }),
 }));
 
@@ -74,12 +75,13 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 }));
 
 const NavBar = ({ loggedIn, setLoggedIn }) => {
-  const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
+  const [openMintForm, setOpenMintForm] = React.useState(false);
   const settings = ["Profile", "Account", "Dashboard", "Logout"];
-  const mainOperations = ["Inbox", "Starred", "Send email", "Drafts"];
+  const mainOperations = ["Create", "Starred", "Send email", "Drafts"];
   const otherOperations = ["All mail", "Trash", "Spam"];
+  const theme = useTheme();
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -113,6 +115,21 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
     handleCloseUserMenu();
   };
 
+  const handleMainOptions = (event) => {
+    switch (event.target.innerText.toLowerCase()) {
+      case "create":
+        console.log("Create Form");
+        setOpenMintForm(true);
+        break;
+      case "profile":
+        break;
+      case "account":
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <CssBaseline />
@@ -135,7 +152,7 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Open settings">
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+                  <UserAvatar></UserAvatar>
                 </IconButton>
               </Tooltip>
               <Menu
@@ -198,7 +215,7 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
         <List>
           {mainOperations.map((text, index) => (
             <ListItem key={text} disablePadding>
-              <ListItemButton>
+              <ListItemButton onClick={(event) => handleMainOptions(event)}>
                 <ListItemIcon>
                   {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
                 </ListItemIcon>
@@ -221,9 +238,12 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
           ))}
         </List>
       </Drawer>
-      {/* <Main open={open}>
-        <DrawerHeader />
-      </Main> */}
+      {openMintForm && (
+        <MintForm
+          openMintForm={openMintForm}
+          setOpenMintForm={setOpenMintForm}
+        ></MintForm>
+      )}
     </Box>
   );
 };

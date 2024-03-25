@@ -1,13 +1,3 @@
-.collectionCard {
-  width: 10rem;
-  margin: 1rem;
-}
-
-.card-footer {
-  position: relative;
-  width: 100%;
-}
-
 .card-body {
   flex: 1;
   margin-bottom: 20px;
@@ -15,39 +5,9 @@
   max-width: fit-content;
 }
 
-.collectionCardImg {
-  border-bottom: 6px black solid;
-}
-
-.collectionCardBtn {
-  background-color: purple;
-  position: absolute;
+.card-footer {
+  position: relative;
   width: 100%;
-  bottom: 0;
-  border-radius: 0px 0px 10px 10px;
-}
-
-.collectionCardBtn:hover {
-  background-color: purple;
-}
-
-.collectionCardBtn:active {
-  background-color: purple;
-}
-
-.collectionCardTable {
-  width: 100%;
-  border: hidden;
-}
-
-.collectionCardTable > tbody > tr {
-  font-size: small;
-  border: hidden;
-  display: inline;
-}
-
-.collectionCardTable > tbody > tr > td {
-  padding: 0.4rem;
 }
 
 .ethLogo {

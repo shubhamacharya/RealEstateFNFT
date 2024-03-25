@@ -1,7 +1,13 @@
-.collectionCards{
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+.collectionCards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  background-color: #191919;
+}
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  background-color: #191919;
 }

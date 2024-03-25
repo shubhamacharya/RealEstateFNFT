@@ -1,34 +1,38 @@
-/* eslint-disable react/prop-types */
-import "./UserAvatar.css";
+import Avatar from "@mui/material/Avatar";
 
-function UserAvatar({ username, size }) {
-  const getInitials = (username) => {
-    console.log(username);
-    const initials = String(username)
-      .split(" ")
-      .map((word) => word[0]);
-    return initials.join("").toUpperCase();
-  };
+function stringToColor(string) {
+  let hash = 0;
+  let i;
 
-  const getRandomColor = () => {
-    const colors = ["#2196F3", "#4CAF50", "#FFC107", "#E91E63", "#795548"];
-    const randomIndex = Math.floor(Math.random() * colors.length);
-    return colors[randomIndex];
-  };
+  /* eslint-disable no-bitwise */
+  for (i = 0; i < string.length; i += 1) {
+    hash = string.charCodeAt(i) + ((hash << 5) - hash);
+  }
 
-  const avatar = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: size,
-    height: size,
-    borderRadius: "50%",
-    backgroundColor: getRandomColor(),
-    color: "#fff",
-    fontSize: size * 0.4,
-  };
+  let color = "#";
 
-  return <div style={avatar}>{getInitials(username)}</div>;
+  for (i = 0; i < 3; i += 1) {
+    const value = (hash >> (i * 8)) & 0xff;
+    color += `00${value.toString(16)}`.slice(-2);
+  }
+  /* eslint-enable no-bitwise */
+
+  return color;
 }
+
+function stringAvatar(name) {
+  return {
+    sx: {
+      bgcolor: stringToColor(name),
+      width: 56,
+      height: 56,
+    },
+    children: `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`,
+  };
+}
+
+const UserAvatar = () => {
+  return <Avatar {...stringAvatar("Mass Dodds")} />;
+};
 
 export default UserAvatar;

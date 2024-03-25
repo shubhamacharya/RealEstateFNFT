@@ -2,9 +2,9 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import NavBar from "./components/NavBar/NavBar";
 import Login from "./components/Login/login";
-// import Collections from "./components/Collections/collections";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
+import Collections from "./components/Collections/collections";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -20,14 +20,14 @@ function App() {
           path="/login"
           element={<Login setLoggedIn={setLoggedIn}></Login>}
         ></Route>
-        {/*  <Route
+        <Route
           path="/home"
           element={<Collections isHome={true}></Collections>}
         ></Route>
         <Route
           path="/collections"
           element={<Collections></Collections>}
-        ></Route>*/}
+        ></Route>
       </Routes>
     </>
   );

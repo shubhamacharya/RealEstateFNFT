@@ -1,6 +1,6 @@
-// /* eslint-disable react/prop-types */
-// /* eslint-disable no-undef */
-// /* eslint-disable no-unused-vars */
+/* eslint-disable react/prop-types */
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 import * as React from "react";
 import {
   Button,
@@ -68,7 +68,8 @@ const Login = ({ setLoggedIn }) => {
       if (data.users.email !== null && actionButtonMsg === "Login") {
         // window.localStorage.setItem("users", JSON.stringify(data.users.token));
         Cookies.set("jwt", JSON.stringify(data.users.token), {
-          expires: 0.0416667,
+          //expires: 0.0416667,
+          expires: 4,
         });
         setLoggedIn(true);
         return navigate("/home");
