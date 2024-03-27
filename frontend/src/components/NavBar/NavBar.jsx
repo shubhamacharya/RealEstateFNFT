@@ -118,7 +118,7 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
   const handleMainOptions = (event) => {
     switch (event.target.innerText.toLowerCase()) {
       case "create":
-        console.log("Create Form");
+          console.log("Create Form");
         setOpenMintForm(true);
         break;
       case "profile":
