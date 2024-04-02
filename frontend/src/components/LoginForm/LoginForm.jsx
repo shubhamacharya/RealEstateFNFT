@@ -8,7 +8,6 @@ import { DialogContent, DialogContentText, TextField } from "@mui/material";
 
 function LoginForm({ setFormData }) {
   const dispatch = useDispatch();
-  const { form } = useSelector((state) => state.registerForm);
   const { actionButtonMsg } = useSelector((state) => state.login);
 
   const handleChange = (e) => {

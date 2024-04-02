@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
 import * as React from "react";
@@ -16,10 +17,7 @@ import {
   CardContent,
   FormControlLabel,
   Grid,
-  InputAdornment,
-  Paper,
   Stack,
-  SvgIcon,
   TextField,
   useTheme,
 } from "@mui/material";
@@ -31,6 +29,7 @@ import MobileStepper from "@mui/material/MobileStepper";
 import Switch from "@mui/material/Switch";
 import ClearIcon from "@mui/icons-material/Clear";
 import ethIcon from "../../assets/ethLogo.svg";
+import { MINT_RNFT } from "../../mutations/Mutation";
 
 const AutoPlaySwipeableViews = autoPlay(SwipeableViews);
 
@@ -40,6 +39,8 @@ import image3 from "../../assets/image (3).png";
 
 import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
+import axios from "axios";
+import Cookies from "js-cookie";
 
 const items = [
   {
@@ -91,16 +92,23 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 });
 
 function MintForm({ openMintForm, setOpenMintForm }) {
+  const theme = useTheme();
+  const [activeStep, setActiveStep] = React.useState(0);
+  const [fractionSwitch, setFractionSwitch] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState(null);
+  const [selectedImages, setSelectedImages] = React.useState([]);
+  const [mintForm, setMintForm] = React.useState({
+    tokenName: "",
+    tokenPrice: "",
+    tokenFraction: "",
+  });
+
   //   const handleClickOpenMintForm = () => {
   //     setOpenMintForm(true);
   //   };
 
   const handleCloseMintForm = () => {
     setOpenMintForm(false);
-  };
-
-  const handleFractionSwitch = (event) => {
-    console.log(event.target);
   };
 
   const VisuallyHiddenInput = styled("input")({
@@ -115,12 +123,6 @@ function MintForm({ openMintForm, setOpenMintForm }) {
     width: 1,
   });
 
-  const theme = useTheme();
-  const [activeStep, setActiveStep] = React.useState(0);
-  const [fractionSwitch, setFractionSwitch] = React.useState(false);
-  const [selectedFile, setSelectedFile] = React.useState(null);
-  const maxSteps = items.length;
-
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
@@ -133,15 +135,87 @@ function MintForm({ openMintForm, setOpenMintForm }) {
     setActiveStep(step);
   };
 
-  const handleCancel = () => {
-    setSelectedFile(null);
+  const handleCancel = (event) => {
+    console.log("Cancel Event Target ==> ", event.target);
+    if (event.target.id == "docUploadCancel") {
+      setSelectedFile(null);
+    } else if (event.target.id == "imageUploadCancel") {
+      setSelectedImages([]);
+    }
   };
 
   // Function to handle file selection
   const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
+    console.log("Event Target ==> ", event.target);
+    if (event.target.id == "docUpload") {
+      const file = event.target.files[0];
+      if (file) {
+        setSelectedFile(file);
+      }
+    } else if (event.target.id == "imgUpload") {
+      setSelectedImages([...event.target.files]);
+    }
+  };
+
+  const handleMintOperation = async (event) => {
+    event.preventDefault();
+    const base64ImagesPromises = selectedImages.map((img) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(img);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+    });
+
+    const base64FilesPromises = new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedFile);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+
+    const base64ImagesStrings = await Promise.all(base64ImagesPromises);
+    const base64FileStrings = await base64FilesPromises;
+
+    try {
+      const {
+        data: { data },
+      } = await axios({
+        method: "post",
+        url: process.env.REACT_APP_GRAPHQL_URL,
+        headers: { Authorization: `Bearer ${Cookies.get("jwt")}` },
+        data: {
+          query: MINT_RNFT,
+          variables: {
+            name: mintForm.tokenName,
+            images: base64ImagesStrings,
+            docs: base64FileStrings,
+            price: mintForm.tokenPrice,
+            ownerAddress: "0x00000000000",
+            operation: "mintNFT",
+          },
+        },
+      });
+    } catch (error) {
+      console.error(error.message);
+    }
+  };
+
+  const handleMintFormChange = (event) => {
+    console.log(event.target.name);
+    if (event.target.name === "tokenName") {
+      setMintForm((mintForm) => {
+        return { ...mintForm, tokenName: event.target.value };
+      });
+    } else if (event.target.name === "tokenPrice") {
+      setMintForm((mintForm) => {
+        return { ...mintForm, tokenPrice: event.target.value };
+      });
+    } else if (event.target.name === "tokenFraction") {
+      setMintForm((mintForm) => {
+        return { ...mintForm, lastName: event.target.value };
+      });
     }
   };
 
@@ -168,9 +242,9 @@ function MintForm({ openMintForm, setOpenMintForm }) {
               <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
                 Create / Mint New Property on Blockchain
               </Typography>
-              {/* <Button color="#ffff">
-                Mint
-              </Button> */}
+              <Button variant="outlined" onClick={handleMintOperation}>
+                Create
+              </Button>
             </Toolbar>
           </AppBar>
           <Card
@@ -189,28 +263,34 @@ function MintForm({ openMintForm, setOpenMintForm }) {
                     <TextField
                       fullWidth
                       required
-                      id="outlined-token-name"
+                      id="token-name"
                       label="Token Name"
+                      name="tokenName"
                       InputLabelProps={{
                         shrink: true,
                       }}
+                      onChange={handleMintFormChange}
                     />
                     <TextField
                       fullWidth
                       required
-                      id="outlined-token-price"
+                      id="token-price"
                       label="Token Price"
                       type="number"
+                      name="tokenPrice"
                       InputLabelProps={{
                         shrink: true,
                       }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SvgIcon component={ethIcon} />
-                          </InputAdornment>
-                        ),
-                      }}
+                      onChange={handleMintFormChange}
+
+                      // TODO: Add ethereum icon before / after price
+                      // InputProps={{
+                      //   startAdornment: (
+                      //     <InputAdornment position="start">
+                      //       <SvgIcon component={ethIcon} />
+                      //     </InputAdornment>
+                      //   ),
+                      // }}
                     />
                     {/* Fraction NFT option */}
                     <FormControlLabel
@@ -228,12 +308,14 @@ function MintForm({ openMintForm, setOpenMintForm }) {
                       <TextField
                         fullWidth
                         required
-                        id="outlined-token-fractions"
+                        id="token-fractions"
                         label="Token Fractions"
                         type="number"
+                        name="tokenFractions"
                         InputLabelProps={{
                           shrink: true,
                         }}
+                        onChange={handleMintFormChange}
                       />
                     )}
                     <Grid container spacing={2}>
@@ -245,12 +327,12 @@ function MintForm({ openMintForm, setOpenMintForm }) {
                       <Grid item xs={12}>
                         <input
                           accept="pdf/*" // Specify the accepted file types
-                          id="file-upload"
+                          id="docUpload"
                           type="file"
                           onChange={handleFileChange}
                           style={{ display: "none" }}
                         />
-                        <label htmlFor="file-upload">
+                        <label htmlFor="docUpload">
                           <Button variant="outlined" component="span">
                             Select File
                           </Button>
@@ -260,7 +342,7 @@ function MintForm({ openMintForm, setOpenMintForm }) {
                         <Typography variant="body1">
                           Selected File: {selectedFile.name}
                           <IconButton color="error" onClick={handleCancel}>
-                            <ClearIcon />
+                            <ClearIcon id="docUploadCancel" />
                           </IconButton>
                         </Typography>
                       )}
@@ -268,86 +350,99 @@ function MintForm({ openMintForm, setOpenMintForm }) {
                   </Stack>
                   <Stack direction="column" spacing={2}>
                     {/* Carsoule */}
-                    <Box sx={{ maxHeight: 400, maxWidth: 350, flexGrow: 1 }}>
-                      <AutoPlaySwipeableViews
-                        axis={theme.direction === "rtl" ? "x-reverse" : "x"}
-                        index={activeStep}
-                        onChangeIndex={handleStepChange}
-                        enableMouseEvents
-                      >
-                        {items.map((step, index) => (
-                          <div key={step.tokenName}>
-                            {Math.abs(activeStep - index) <= 2 ? (
-                              <Box
-                                component="img"
-                                sx={{
-                                  height: 400,
-                                  display: "block",
-                                  maxWidth: 350,
-                                  overflow: "hidden",
-                                  width: "100%",
-                                }}
-                                src={step.image}
-                                alt={step.tokenName}
-                              />
-                            ) : null}
-                          </div>
-                        ))}
-                      </AutoPlaySwipeableViews>
-                      <MobileStepper
-                        steps={maxSteps}
-                        position="static"
-                        activeStep={activeStep}
-                        nextButton={
-                          <Button
-                            size="small"
-                            onClick={handleNext}
-                            disabled={activeStep === maxSteps - 1}
+                    <Box sx={{ maxHeight: 500, maxWidth: 350, flexGrow: 1 }}>
+                      {selectedImages.length > 0 && (
+                        <>
+                          <AutoPlaySwipeableViews
+                            axis={theme.direction === "rtl" ? "x-reverse" : "x"}
+                            index={activeStep}
+                            onChangeIndex={handleStepChange}
+                            enableMouseEvents
                           >
-                            {theme.direction === "rtl" ? (
-                              <KeyboardArrowLeft />
-                            ) : (
-                              <KeyboardArrowRight />
-                            )}
-                          </Button>
-                        }
-                        backButton={
-                          <Button
-                            size="small"
-                            onClick={handleBack}
-                            disabled={activeStep === 0}
-                          >
-                            {theme.direction === "rtl" ? (
-                              <KeyboardArrowRight />
-                            ) : (
-                              <KeyboardArrowLeft />
-                            )}
-                          </Button>
-                        }
-                      />
-                    </Box>
-                    <Paper
-                      square
-                      elevation={0}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        height: 50,
-                        p: 2,
-                      }}
-                    >
+                            {selectedImages.map((step, index) => (
+                              <div key={step.name}>
+                                {Math.abs(activeStep - index) <= 2 ? (
+                                  <Box
+                                    component="img"
+                                    sx={{
+                                      height: 350,
+                                      display: "block",
+                                      maxWidth: 650,
+                                      overflow: "hidden",
+                                      width: "100%",
+                                    }}
+                                    src={URL.createObjectURL(step)}
+                                    alt={step.name}
+                                  />
+                                ) : null}
+                              </div>
+                            ))}
+                          </AutoPlaySwipeableViews>
+                          <MobileStepper
+                            steps={selectedImages.length}
+                            position="static"
+                            activeStep={activeStep}
+                            nextButton={
+                              <Button
+                                size="small"
+                                onClick={handleNext}
+                                disabled={
+                                  activeStep === selectedImages.length - 1
+                                }
+                              >
+                                {theme.direction === "rtl" ? (
+                                  <KeyboardArrowLeft />
+                                ) : (
+                                  <KeyboardArrowRight />
+                                )}
+                              </Button>
+                            }
+                            backButton={
+                              <Button
+                                size="small"
+                                onClick={handleBack}
+                                disabled={activeStep === 0}
+                              >
+                                {theme.direction === "rtl" ? (
+                                  <KeyboardArrowRight />
+                                ) : (
+                                  <KeyboardArrowLeft />
+                                )}
+                              </Button>
+                            }
+                          />
+                        </>
+                      )}
+
                       {/* Images Uploads */}
-                      <Button
-                        component="label"
-                        role={undefined}
-                        variant="text"
-                        tabIndex={-1}
-                        startIcon={<CloudUploadIcon />}
+                      <Box
+                        sx={{
+                          flexGrow: 1,
+                          justifyContent: "center",
+                        }}
                       >
-                        Upload token images
-                        <VisuallyHiddenInput type="file" />
-                      </Button>
-                    </Paper>
+                        <Button
+                          component="label"
+                          role={undefined}
+                          variant="text"
+                          tabIndex={-1}
+                          startIcon={<CloudUploadIcon />}
+                        >
+                          Upload token images
+                          <VisuallyHiddenInput
+                            multiple
+                            type="file"
+                            id="imgUpload"
+                            onChange={handleFileChange}
+                          />
+                        </Button>
+                        {selectedImages.length > 0 && (
+                          <IconButton color="error" onClick={handleCancel}>
+                            <ClearIcon id="imageUploadCancel" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Box>
                   </Stack>
                 </Stack>
               </CardContent>
