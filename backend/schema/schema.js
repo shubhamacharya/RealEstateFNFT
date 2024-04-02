@@ -26,7 +26,7 @@ const UsersType = new GraphQLObjectType({
         email: { type: GraphQLString },
         role: { type: GraphQLString },
         password: { type: GraphQLString },
-        token: {type: GraphQLString}
+        token: { type: GraphQLString }
     })
 })
 
@@ -60,6 +60,7 @@ const nftDetailsType = new GraphQLObjectType({
         tokenId: { type: GraphQLInt },
         name: { type: GraphQLString },
         tokenImg: { type: new GraphQLList(GraphQLString) },
+        docs: { type: GraphQLString },
         // tokenImg: { type: new FileList(new File) },
         tokenURI: { type: GraphQLString },
         price: { type: GraphQLInt },
@@ -118,11 +119,11 @@ const mutation = new GraphQLObjectType({
                 tokenURI: { type: new GraphQLNonNull(GraphQLString) },
                 price: { type: new GraphQLNonNull(GraphQLInt) },
                 ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
-                adminAddress: { type: new GraphQLNonNull(GraphQLString) },
+                docs: { type: new GraphQLNonNull(GraphQLString) }
             },
             async resolve(parent, args) {
                 let txId = await mintNFTCallout(args);
-                return await NFTDetails.findOne({ txId })
+                return await NFTDetails.findOne({ txId }).exec()
             }
         },
 
@@ -142,7 +143,7 @@ const mutation = new GraphQLObjectType({
                         await user.save();
                         return user
                     }
-                    else if (users !== null && args.operation.toLowerCase() === "register"){
+                    else if (users !== null && args.operation.toLowerCase() === "register") {
                         console.log("User exists. Please login")
                         return { "error": "User exists. Please login" }
                     }

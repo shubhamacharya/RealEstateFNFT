@@ -38,13 +38,13 @@ const getContractObj = async (contractName) => {
 const mintNFTCallout = async (args) => {
     RNFTContract = await getContractObj("RNFT");
     // await RNFTContract.methods.setEscrowAddress(process.env.Escrow1155_CONTRACT_ADDRESS).send({ from: args.adminAddress });
-    // await RNFTContract.methods.createNFT(args.ownerAddress, args.price).send({ from: args.adminAddress, gas: 1000000 });
+    // await RNFTContract.methods.createNFT(args.ownerAddress, args.price).send({ from: args.ownerAddress, gas: 1000000 });
 
     // let res = await RNFTContract.getPastEvents();
     // let nftReceipt = new NFTDetails();
     // let transactionReceipt = new Transactions();
 
-    uploadImageToIPFS(args.name, args.images)
+    // uploadImageToIPFS(args.name, args.images)
 
     // nftReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
     // nftReceipt.name = args.name;

@@ -12,12 +12,12 @@ const PORT = 4000
 const app = express();
 // app.use(bodyParser.text());
 // app.use(bodyParser.urlencoded());
-app.use(bodyParser.raw());
-app.use(bodyParser.json());
+app.use(bodyParser.raw({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
 
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use('/graphql', (req, res, next) => {
-    if (["login", "register"].includes(req.body.variables.operation.toLowerCase())) {
+    if (["login", "register"].includes(req.body.variables?.operation.toLowerCase())) {
         next();
     }
     else {
