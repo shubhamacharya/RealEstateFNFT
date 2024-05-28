@@ -19,11 +19,12 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
 import MailIcon from "@mui/icons-material/Mail";
-import { Menu, MenuItem, Tooltip, styled } from "@mui/material";
+import { Menu, MenuItem, Stack, Tooltip, styled } from "@mui/material";
 import Login from "../Login/login";
 import Cookies from "js-cookie";
 import UserAvatar from "../UserAvatar/UserAvatar";
 import MintForm from "../MintForm/MintForm";
+import Wallet from "./../Wallet/Wallet";
 
 const drawerWidth = 240;
 
@@ -118,7 +119,7 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
   const handleMainOptions = (event) => {
     switch (event.target.innerText.toLowerCase()) {
       case "create":
-          console.log("Create Form");
+        console.log("Create Form");
         setOpenMintForm(true);
         break;
       case "profile":
@@ -150,37 +151,40 @@ const NavBar = ({ loggedIn, setLoggedIn }) => {
           </Typography>
           {loggedIn ? (
             <Box sx={{ flexGrow: 0 }}>
-              <Tooltip title="Open settings">
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <UserAvatar></UserAvatar>
-                </IconButton>
-              </Tooltip>
-              <Menu
-                sx={{ mt: "45px" }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-              >
-                {settings.map((setting) => (
-                  <MenuItem
-                    key={setting}
-                    value={setting}
-                    onClick={handleSettings}
-                  >
-                    <Typography textAlign="center">{setting}</Typography>
-                  </MenuItem>
-                ))}
-              </Menu>
+              <Stack direction="row" spacing={2}>
+                <Wallet />
+                <Tooltip title="Open settings">
+                  <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                    <UserAvatar></UserAvatar>
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  sx={{ mt: "45px" }}
+                  id="menu-appbar"
+                  anchorEl={anchorElUser}
+                  anchorOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  keepMounted
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  open={Boolean(anchorElUser)}
+                  onClose={handleCloseUserMenu}
+                >
+                  {settings.map((setting) => (
+                    <MenuItem
+                      key={setting}
+                      value={setting}
+                      onClick={handleSettings}
+                    >
+                      <Typography textAlign="center">{setting}</Typography>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </Stack>
             </Box>
           ) : (
             <>

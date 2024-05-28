@@ -99,8 +99,9 @@ function MintForm({ openMintForm, setOpenMintForm }) {
   const [selectedImages, setSelectedImages] = React.useState([]);
   const [mintForm, setMintForm] = React.useState({
     tokenName: "",
-    tokenPrice: "",
+    tokenPrice: 0.0,
     tokenFraction: "",
+    ownerAddress: "",
   });
 
   //   const handleClickOpenMintForm = () => {
@@ -184,7 +185,10 @@ function MintForm({ openMintForm, setOpenMintForm }) {
       } = await axios({
         method: "post",
         url: process.env.REACT_APP_GRAPHQL_URL,
-        headers: { Authorization: `Bearer ${Cookies.get("jwt")}` },
+        headers: {
+          Authorization: `Bearer ${Cookies.get("jwt")}`,
+          "Content-Type": "application/json",
+        },
         data: {
           query: MINT_RNFT,
           variables: {
@@ -194,11 +198,15 @@ function MintForm({ openMintForm, setOpenMintForm }) {
             price: mintForm.tokenPrice,
             ownerAddress: "0x00000000000",
             operation: "mintNFT",
+            tokenURI: "",
           },
         },
       });
     } catch (error) {
-      console.error(error.message);
+      console.error(
+        "Error:",
+        error.response ? error.response.data : error.message
+      );
     }
   };
 
@@ -210,7 +218,7 @@ function MintForm({ openMintForm, setOpenMintForm }) {
       });
     } else if (event.target.name === "tokenPrice") {
       setMintForm((mintForm) => {
-        return { ...mintForm, tokenPrice: event.target.value };
+        return { ...mintForm, tokenPrice: parseFloat(event.target.value) };
       });
     } else if (event.target.name === "tokenFraction") {
       setMintForm((mintForm) => {
