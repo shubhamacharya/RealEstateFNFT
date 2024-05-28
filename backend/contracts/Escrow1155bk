@@ -10,12 +10,12 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     using Counters for Counters.Counter;
     Counters.Counter public _transactionIdCounter;
+
     struct Transaction {
         uint256 id;
         address payable seller;
         address payable buyer;
         uint256 tokenID;
-        uint256 parentTokenId;
         uint256 amount;
         uint256 noOfTokens;
         Status transactionStatus;
@@ -41,15 +41,15 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
 
     constructor(address _ERC1155Address) {
         ERC1155Address = _ERC1155Address;
+        _transactionIdCounter.increment();
     }
 
     function depositToken(
         address tokenOwner,
         uint256 _tokenID,
-        uint256 _parentTokenId,
         uint256 _amount,
         uint256 _noOfTokens
-    ) public payable {
+    ) public {
         Transaction memory txn;
         txn.id = _transactionIdCounter.current();
         txn.tokenID = _tokenID;
@@ -57,7 +57,6 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         txn.noOfTokens = _noOfTokens;
         txn.seller = payable(tokenOwner);
         txn.transactionStatus = Status.DEPOSITE;
-        txn.parentTokenId = _parentTokenId;
 
         ERC1155(ERC1155Address).safeTransferFrom(
             tokenOwner,
@@ -77,7 +76,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     ) public payable currentStatus(Status.DEPOSITE, _transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
         require(
-            txn.amount <= msg.value,
+            txn.amount * (10 ** 18) == msg.value,
             "Amount must to equal to selling price of the property."
         );
         txn.buyer = payable(msg.sender);
@@ -128,7 +127,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         uint256 _transactionId
     ) public onlySeller(_transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
-        payable(txn.seller).transfer(txn.amount);
+        payable(txn.seller).transfer((txn.amount * (10 ** 18)));
 
         //require(success, "Failed to refund to buyer.");
         txn.transactionStatus = Status.REFUND;
@@ -139,12 +138,10 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         uint256 _transactionId
     )
         public
+        currentStatus(Status.REFUND, _transactionId)
         onlySeller(_transactionId)
-        
     {
-        require(transactionArray[_transactionId].transactionStatus == Status.WITHDRAWED || transactionArray[_transactionId].transactionStatus == Status.DISPUTTED);
         transactionArray[_transactionId].buyerCancel = false;
-        transactionArray[_transactionId].sellerCancel = false;
         transactionArray[_transactionId].transactionStatus = Status.DEPOSITE;
     }
 
@@ -163,6 +160,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         uint256 _transactionId
     )
         public
+        payable
         currentStatus(Status.DELIVERY, _transactionId)
         onlyBuyer(_transactionId)
     {
@@ -174,7 +172,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
             txn.noOfTokens,
             ""
         );
-        payable(txn.seller).transfer(txn.amount);
+        payable(txn.seller).transfer((txn.amount * (10 ** 18)));
         // require(success, "Failed to transfer amount to seller.");
         txn.transactionStatus = Status.CONFIRMED;
         transactionArray[_transactionId] = txn;
@@ -203,7 +201,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         uint256 id,
         uint256 value,
         bytes calldata data
-    ) external pure returns (bytes4) {
+    ) external pure override returns (bytes4) {
         return
             bytes4(
                 keccak256(

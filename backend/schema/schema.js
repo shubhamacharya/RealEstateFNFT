@@ -6,7 +6,8 @@ const { GraphQLObjectType,
     GraphQLInt,
     GraphQLSchema,
     GraphQLList,
-    GraphQLEnumType
+    GraphQLEnumType,
+    GraphQLFloat
 } = require("graphql");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -116,8 +117,8 @@ const mutation = new GraphQLObjectType({
                 name: { type: new GraphQLNonNull(GraphQLString) },
                 images: { type: new GraphQLNonNull(new GraphQLList(GraphQLString)) },
                 // images: { type: new GraphQLNonNull(new GraphQLList(nftImagesList)) },
-                tokenURI: { type: new GraphQLNonNull(GraphQLString) },
-                price: { type: new GraphQLNonNull(GraphQLInt) },
+                tokenURI: { type: GraphQLString },
+                price: { type: new GraphQLNonNull(GraphQLFloat) },
                 ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
                 docs: { type: new GraphQLNonNull(GraphQLString) }
             },

@@ -1,7 +1,7 @@
 let { Web3 } = require('web3');
 require("dotenv").config({ path: "../.env" });
 const fsPromise = require('fs/promises');
-const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8545"));
+const web3 = new Web3(new Web3.providers.HttpProvider(process.env.PROVIDER));
 var RNFTContract, Escrow1155Contract;
 const abiDecoder = require('abi-decoder');
 
@@ -37,35 +37,35 @@ const getContractObj = async (contractName) => {
 
 const mintNFTCallout = async (args) => {
     RNFTContract = await getContractObj("RNFT");
-    // await RNFTContract.methods.setEscrowAddress(process.env.Escrow1155_CONTRACT_ADDRESS).send({ from: args.adminAddress });
-    // await RNFTContract.methods.createNFT(args.ownerAddress, args.price).send({ from: args.ownerAddress, gas: 1000000 });
+    await RNFTContract.methods.setEscrow(process.env.Escrow1155_CONTRACT_ADDRESS).send({ from: process.env.ADMIN_ADDRESS });
+    await RNFTContract.methods.createNFT(args.price).send({ from: args.ownerAddress, gas: 1000000 });
 
-    // let res = await RNFTContract.getPastEvents();
-    // let nftReceipt = new NFTDetails();
-    // let transactionReceipt = new Transactions();
-
+    let res = await RNFTContract.getPastEvents();
+    let nftReceipt = new NFTDetails();
+    let transactionReceipt = new Transactions();
+    console.log(res);
     // uploadImageToIPFS(args.name, args.images)
 
-    // nftReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
-    // nftReceipt.name = args.name;
-    // nftReceipt.tokenURI = args.tokenURI;
-    // nftReceipt.price = parseInt(res[1].returnValues.price);
-    // nftReceipt.ownerAddress = res[1].returnValues.to.toLowerCase();
-    // nftReceipt.blockNo = parseInt(res[1].blockNumber);
-    // nftReceipt.txId = res[1].transactionHash;
-    // nftReceipt.tokenImg = args.images;
+    nftReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
+    nftReceipt.name = args.name;
+    nftReceipt.tokenURI = args.tokenURI;
+    nftReceipt.price = parseInt(res[1].returnValues.price);
+    nftReceipt.ownerAddress = res[1].returnValues.to.toLowerCase();
+    nftReceipt.blockNo = parseInt(res[1].blockNumber);
+    nftReceipt.txId = res[1].transactionHash;
+    nftReceipt.tokenImg = args.images;
 
-    // transactionReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
-    // transactionReceipt.quantity = parseInt(res[0].returnValues.value);
-    // transactionReceipt.to = res[0].returnValues.to.toLowerCase();
-    // transactionReceipt.from = res[0].returnValues.from.toLowerCase();
-    // transactionReceipt.blockNumber = parseInt(res[0].returnValues.blockNumber);
-    // transactionReceipt.txId = res[0].transactionHash;
+    transactionReceipt.tokenId = parseInt(res[1].returnValues.tokenId);
+    transactionReceipt.quantity = parseInt(res[0].returnValues.value);
+    transactionReceipt.to = res[0].returnValues.to.toLowerCase();
+    transactionReceipt.from = res[0].returnValues.from.toLowerCase();
+    transactionReceipt.blockNumber = parseInt(res[0].returnValues.blockNumber);
+    transactionReceipt.txId = res[0].transactionHash;
 
-    // await nftReceipt.save();
-    // await transactionReceipt.save();
-    // return res[0].transactionHash;
-    return "all commented"
+    await nftReceipt.save();
+    await transactionReceipt.save();
+    return res[0].transactionHash;
+    // return "all commented"
 }
 
 const sellNFTCallout = async (args) => {

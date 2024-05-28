@@ -31,7 +31,6 @@
     "graphql": "^16.7.1",
     "graphql-http": "^1.19.0",
     "graphql-upload": "^16.0.2",
-    "hardhat": "^2.19.1",
     "helia": "^2.1.0",
     "jsonwebtoken": "^9.0.2",
     "mocha": "^10.2.0",
@@ -39,5 +38,24 @@
     "multiaddr": "^10.0.1",
     "web3": "^4.0.2",
     "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-ignition": "^0.15.0",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-verify": "^1.1.1",
+    "@typechain/ethers-v6": "^0.4.0",
+    "@typechain/hardhat": "^8.0.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": "^10.0.6",
+    "ethers": "^6.4.0",
+    "hardhat": "^2.22.2",
+    "hardhat-gas-reporter": "^1.0.8",
+    "nodemon": "^3.1.1",
+    "solidity-coverage": "^0.8.1",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.2.0",
+    "typescript": "^5.4.3"
   }
 }
