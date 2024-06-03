@@ -16,9 +16,9 @@ describe('RNFT Contract', () => {
 
     it('should mint new token', async () => {
         // NFT Id 1
-        expect(await rnftContract.connect(S1).createNFT(5)).to.emit(rnftContract, "NFTCreated");
+        expect(await rnftContract.connect(S1).createNFT('5000000000000000000')).to.emit(rnftContract, "NFTCreated");
         // NFT Id 2
-        expect(await rnftContract.connect(S1).createNFT(10)).to.emit(rnftContract, "NFTCreated");
+        expect(await rnftContract.connect(S1).createNFT('10000000000000000000')).to.emit(rnftContract, "NFTCreated");
     });
 
     it('should create fractions of property', async () => {

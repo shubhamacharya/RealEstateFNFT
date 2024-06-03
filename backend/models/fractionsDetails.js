@@ -1,15 +1,23 @@
+const { boolean } = require('hardhat/internal/core/params/argumentTypes');
 const mongoose = require('mongoose');
 const fnftDetails = mongoose.Schema({
-    tokenOwners: {
-        type: [String],
+    fractionId: {
+        type: String,
         //required: true, // [true, "Please Enter the Token URI"],
     },
-    NFTId: {
+    tokenId: {
         type: Number,
         //required: true, // [true, "Please Enter Total Supply"],
     },
-    quantity: {
-        type: Number
+    owner: {
+        type: String
+    },
+    price: {
+        type: Number,
+    },
+    forSale: {
+        type: Boolean,
+        default: false
     },
     txId: {
         type: String,

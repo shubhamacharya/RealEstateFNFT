@@ -26,6 +26,10 @@ const nftDetails = mongoose.Schema({
         type: Boolean,
         default: false
     },
+    totalFractions: {
+        type: Number,
+        default: 0
+    },
     txId: {
         type: String,
         //required: true, //[true, "Please Enter the trnsaction ID"],

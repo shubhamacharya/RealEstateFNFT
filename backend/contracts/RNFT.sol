@@ -43,16 +43,17 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
     mapping(uint256 => Fractions) public fractionIdVsFraction;
     mapping(uint256 => address) public _tokenApprovals;
 
-    event NFTCreated(address to, uint256 tokenId, uint256 price);
+    event NFTCreated(address to, uint256 indexed tokenId, uint256 price);
     event NFTFractioned(
         address to,
-        uint256 tokenId,
+        uint256 indexed tokenId,
         uint256[] fractionId,
+        uint256 pricePerFraction,
         uint256 noOfFractions
     );
 
-    event FractionsForSale(uint256 tokenId, uint256 noOfFractions);
-    event NFTForSale(uint256 tokenId, bool isForSale);
+    event FractionsForSale(uint256 indexed tokenId, uint256 noOfFractions);
+    event NFTForSale(uint256 indexed tokenId, bool isForSale);
 
     function setURI(string memory newuri) public onlyAdmin {
         _setURI(newuri);
@@ -67,7 +68,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
         token.tokenId = _tokenIdCounter.current();
         token.owner = msg.sender;
         token.forSale = false;
-        token.price = price * (10 ** 18);
+        token.price = price;
         tokenIdVsToken[token.tokenId] = token;
         _mint(token.owner, token.tokenId, 1, "");
         _tokenIdCounter.increment();
@@ -106,6 +107,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
             tempToken.owner,
             tempToken.tokenId,
             tokenIdVsFractionIds[tempToken.tokenId],
+            (tempToken.price / _noOfFractions),
             _noOfFractions
         );
     }
