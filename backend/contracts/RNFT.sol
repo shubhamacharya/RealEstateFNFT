@@ -104,7 +104,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
         tokenIdVsToken[tempToken.tokenId] = tempToken;
 
         emit NFTFractioned(
-            tempToken.owner,
+            msg.sender,
             tempToken.tokenId,
             tokenIdVsFractionIds[tempToken.tokenId],
             (tempToken.price / _noOfFractions),

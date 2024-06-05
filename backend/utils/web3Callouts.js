@@ -9,6 +9,7 @@ const NFTDetails = require("../models/nftDetails");
 const FractionsDetails = require("../models/fractionsDetails");
 const Transactions = require("../models/transactions");
 const { uploadImageToIPFS } = require("./ipfsOperations");
+const fractionsDetails = require("../models/fractionsDetails");
 
 const getABI = async (filePath) => {
   const data = await fsPromise.readFile(filePath, "utf-8");
@@ -63,7 +64,7 @@ const mintNFTCallout = async (args) => {
         nftReceipt.name = args.name;
         nftReceipt.tokenURI = args.tokenURI;
         nftReceipt.price = parseFloat(
-          BigInt(res.returnValues.price) / BigInt(Math.pow(10, 18))
+          Number(res.returnValues.price) / Number(Math.pow(10, 18))
         );
         nftReceipt.ownerAddress = res.returnValues.to.toLowerCase();
         nftReceipt.blockNo = parseInt(res.blockNumber);
@@ -125,7 +126,6 @@ const sellNFTCallout = async (args) => {
           nftReceipt.forSale = true;
 
           await nftReceipt.save();
-          return res.transactionHash;
         }
       });
   } catch (error) {
@@ -134,13 +134,14 @@ const sellNFTCallout = async (args) => {
     return transactionReceipt.error;
   } finally {
     await transactionReceipt.save();
-    return res.transactionHash;
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : res.transactionHash;
   }
 };
 
 const fractionNFTCallout = async (args) => {
   let transactionReceipt = new Transactions();
-  let fractionsReceipt = new FractionsDetails();
   let res;
   try {
     RNFTContract = await getContractObj("RNFT");
@@ -149,7 +150,6 @@ const fractionNFTCallout = async (args) => {
       .send({ from: args.ownerAddress, gas: 1000000 })
       .on("receipt", async (receipt) => {
         res = receipt.events.NFTFractioned;
-        console.log(res);
         transactionReceipt.tokenId = parseInt(res.returnValues.tokenId);
         transactionReceipt.quantity = parseInt(res.returnValues.noOfFractions);
         transactionReceipt.to = res.returnValues.to.toLowerCase();
@@ -161,10 +161,13 @@ const fractionNFTCallout = async (args) => {
         transactionReceipt.txId = res.transactionHash;
 
         for (const id of res.returnValues.fractionId) {
+          let fractionsReceipt = new FractionsDetails();
           fractionsReceipt.fractionId = parseInt(id);
           fractionsReceipt.tokenId = parseInt(res.returnValues.tokenId);
           fractionsReceipt.owner = res.returnValues.to.toLowerCase();
-          fractionsReceipt.price = parseInt(res.returnValues.pricePerFraction);
+          fractionsReceipt.price =
+            Number(res.returnValues.pricePerFraction) /
+            Number(Math.pow(10, 18));
           fractionsReceipt.txId = res.transactionHash;
           fractionsReceipt.blockNumber = parseInt(res.blockNumber);
           await fractionsReceipt.save();
@@ -173,10 +176,65 @@ const fractionNFTCallout = async (args) => {
   } catch (error) {
     console.log(error.cause);
     transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
-    return transactionReceipt.error;
   } finally {
     await transactionReceipt.save();
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : transactionReceipt.txId;
   }
 };
 
-module.exports = { mintNFTCallout, sellNFTCallout, fractionNFTCallout };
+const sellFractionsCallout = async (args) => {
+  let transactionReceipt = new Transactions();
+  let res;
+  try {
+    RNFTContract = await getContractObj("RNFT");
+    Escrow1155Contract = await getContractObj("Escrow1155");
+
+    await RNFTContract.methods
+      .sellFractions(args.tokenId, args.noOfFractions)
+      .send({ from: args.ownerAddress, gas: 1000000 })
+      .on("receipt", async (receipt) => {
+        res = receipt.events.TransferSingle;
+
+        let escrow1155Events = await Escrow1155Contract.getPastEvents(
+          "allEvents"
+        );
+        if (escrow1155Events.length > 0) {
+          escrow1155Events.forEach(async (event) => {
+            // Update Fractions Details
+            let fractionsData = await fractionsDetails.findOne({
+              fractionId: parseInt(event.returnValues[0]),
+            });
+
+            fractionsData.forSale = true;
+            fractionsData.owner = res.returnValues.to.toLowerCase();
+
+            // Update Transaction Details
+            transactionReceipt = new Transactions();
+            transactionReceipt.tokenId = parseInt(event.returnValues[0]);
+            transactionReceipt.quantity = parseInt(1);
+            transactionReceipt.to = res.returnValues.to.toLowerCase();
+            transactionReceipt.from =
+              "from" in res.returnValues
+                ? res.returnValues.from.toLowerCase()
+                : "0x00000000000000000000000000000000";
+            transactionReceipt.blockNumber = parseInt(event.blockNumber);
+            transactionReceipt.txId = event.transactionHash;
+
+            await transactionReceipt.save();
+            await fractionsData.save();
+          });
+        }
+      });
+  } catch (error) {
+  } finally {
+  }
+};
+
+module.exports = {
+  mintNFTCallout,
+  sellNFTCallout,
+  fractionNFTCallout,
+  sellFractionsCallout,
+};

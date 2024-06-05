@@ -21,6 +21,7 @@ const {
   mintNFTCallout,
   sellNFTCallout,
   fractionNFTCallout,
+  sellFractionsCallout,
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -69,7 +70,7 @@ const nftDetailsType = new GraphQLObjectType({
     docs: { type: GraphQLString },
     // tokenImg: { type: new FileList(new File) },
     tokenURI: { type: GraphQLString },
-    price: { type: GraphQLInt },
+    price: { type: GraphQLFloat },
     ownerAddress: { type: GraphQLString },
     txId: { type: GraphQLString },
     blockNo: { type: GraphQLInt },
@@ -213,6 +214,19 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         let txId = await fractionNFTCallout(args);
+        return txId;
+      },
+    },
+
+    sellFractions: {
+      type: fnftDetailsType,
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        noOfFractions: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await sellFractionsCallout(args);
         return txId;
       },
     },
