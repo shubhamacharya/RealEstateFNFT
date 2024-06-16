@@ -7,21 +7,21 @@ const {
   GraphQLInt,
   GraphQLSchema,
   GraphQLList,
-  GraphQLEnumType,
   GraphQLFloat,
   GraphQLBoolean,
+  Kind,
 } = require("graphql");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const NFTDetails = require("../models/nftDetails");
 const FractionsDetails = require("../models/fractionsDetails");
-const Transactions = require("../models/transactions");
 const Users = require("../models/userDetails");
 const {
   mintNFTCallout,
   sellNFTCallout,
   fractionNFTCallout,
   sellFractionsCallout,
+  buyTokensCallout,
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -68,7 +68,6 @@ const nftDetailsType = new GraphQLObjectType({
     name: { type: GraphQLString },
     tokenImg: { type: new GraphQLList(GraphQLString) },
     docs: { type: GraphQLString },
-    // tokenImg: { type: new FileList(new File) },
     tokenURI: { type: GraphQLString },
     price: { type: GraphQLFloat },
     ownerAddress: { type: GraphQLString },
@@ -100,18 +99,16 @@ const RootQuery = new GraphQLObjectType({
       type: new GraphQLList(nftDetailsType),
       args: { ownerAddress: { type: GraphQLString } },
       async resolve(parent, args) {
-        let res = await NFTDetails.find({
+        return await NFTDetails.find({
           ownerAddress: args.ownerAddress.toLowerCase(),
         }).exec();
-        return res;
       },
     },
     fnftOfUsers: {
       type: fnftDetailsType,
       args: { NFTId: { type: GraphQLInt } },
       async resolve(parent, args) {
-        let res = await FractionsDetails.findOne({ NFTId: args.NFTId }).exec();
-        return res;
+        return await FractionsDetails.findOne({ tokenId: args.NFTId }).exec();
       },
     },
   },
@@ -126,7 +123,6 @@ const mutation = new GraphQLObjectType({
       args: {
         name: { type: new GraphQLNonNull(GraphQLString) },
         images: { type: new GraphQLNonNull(new GraphQLList(GraphQLString)) },
-        // images: { type: new GraphQLNonNull(new GraphQLList(nftImagesList)) },
         tokenURI: { type: GraphQLString },
         price: { type: new GraphQLNonNull(GraphQLFloat) },
         ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
@@ -148,43 +144,41 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         try {
-          let users = await Users.findOne({ email: args.email }).exec();
-          if (users == null && args.operation.toLowerCase() === "register") {
-            let user = new Users();
-            user.email = args.email;
-            user.password = await bcrypt.hash(args.password, 10);
-            user.role = "user";
+          let user = await Users.findOne({ email: args.email }).exec();
+          if (user == null && args.operation.toLowerCase() === "register") {
+            let newUser = new Users({
+              email: args.email,
+              password: await bcrypt.hash(args.password, 10),
+              role: "user",
+            });
 
-            await user.save();
-            return user;
+            await newUser.save();
+            return newUser;
           } else if (
-            users !== null &&
+            user !== null &&
             args.operation.toLowerCase() === "register"
           ) {
             console.log("User exists. Please login");
             return { error: "User exists. Please login" };
+          } else if (user == null && args.operation.toLowerCase() === "login") {
+            console.log("User does not exist. Please register user");
+            return { error: "User does not exist. Please register user" };
           } else if (
-            users == null &&
-            args.operation.toLowerCase() === "login"
-          ) {
-            console.log("User does not exists. Please register user");
-            return { error: "User does not exists. Please register user" };
-          } else if (
-            users !== null &&
-            !(await bcrypt.compare(args.password, users.password)) &&
+            user !== null &&
+            !(await bcrypt.compare(args.password, user.password)) &&
             args.operation.toLowerCase() === "login"
           ) {
             console.log("Wrong EmailId or password");
             return { error: "wrong emailid or password" };
           } else {
-            users.token = jwt.sign(
-              { userId: users._id, email: users.email, role: users.role },
+            user.token = jwt.sign(
+              { userId: user._id, email: user.email, role: user.role },
               process.env.JWT_SECRET,
               {
                 expiresIn: "1h",
               }
             );
-            return users;
+            return user;
           }
         } catch (error) {
           console.log(error);
@@ -201,7 +195,7 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         let txId = await sellNFTCallout(args);
-        return txId;
+        return await NFTDetails.findOne({ txId }).exec();
       },
     },
 
@@ -214,7 +208,7 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         let txId = await fractionNFTCallout(args);
-        return txId;
+        return await FractionsDetails.findOne({ txId }).exec();
       },
     },
 
@@ -227,7 +221,20 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         let txId = await sellFractionsCallout(args);
-        return txId;
+        return await FractionsDetails.findOne({ txId }).exec();
+      },
+    },
+
+    buyTokens: {
+      type: fnftDetailsType,
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await buyTokensCallout(args);
+        return await FractionsDetails.findOne({ txId }).exec();
       },
     },
   },

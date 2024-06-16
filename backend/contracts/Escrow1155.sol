@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
@@ -37,10 +37,12 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     mapping(uint256 => Transaction) public transactionArray;
 
     address public ERC1155Address;
-    event TokenDepoisted(uint256, uint256);
+    event TokenDepoisted(uint256, uint256, uint256, uint256);
+    event EtherDeposited(uint256, uint256, address);
 
     constructor(address _ERC1155Address) {
         ERC1155Address = _ERC1155Address;
+        _transactionIdCounter.increment();
     }
 
     function depositToken(
@@ -69,7 +71,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         transactionArray[txn.id] = txn;
         _transactionIdCounter.increment();
 
-        emit TokenDepoisted(_tokenID, _amount);
+        emit TokenDepoisted(_parentTokenId, _tokenID, _amount, txn.id);
     }
 
     function depositETH(
@@ -77,12 +79,14 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     ) public payable currentStatus(Status.DEPOSITE, _transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
         require(
-            txn.amount <= msg.value,
+            txn.amount >= msg.value,
             "Amount must to equal to selling price of the property."
         );
         txn.buyer = payable(msg.sender);
         txn.transactionStatus = Status.PAYMENT;
         transactionArray[_transactionId] = txn;
+        
+        emit EtherDeposited(txn.parentTokenId, txn.tokenID, txn.buyer);
     }
 
     function cancelTransaction(

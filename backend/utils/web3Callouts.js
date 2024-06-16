@@ -9,7 +9,7 @@ const NFTDetails = require("../models/nftDetails");
 const FractionsDetails = require("../models/fractionsDetails");
 const Transactions = require("../models/transactions");
 const { uploadImageToIPFS } = require("./ipfsOperations");
-const fractionsDetails = require("../models/fractionsDetails");
+const { TokenExpiredError } = require("jsonwebtoken");
 
 const getABI = async (filePath) => {
   const data = await fsPromise.readFile(filePath, "utf-8");
@@ -203,8 +203,8 @@ const sellFractionsCallout = async (args) => {
         if (escrow1155Events.length > 0) {
           escrow1155Events.forEach(async (event) => {
             // Update Fractions Details
-            let fractionsData = await fractionsDetails.findOne({
-              fractionId: parseInt(event.returnValues[0]),
+            let fractionsData = await FractionsDetails.findOne({
+              fractionId: parseInt(event.returnValues[1]),
             });
 
             fractionsData.forSale = true;
@@ -212,8 +212,8 @@ const sellFractionsCallout = async (args) => {
 
             // Update Transaction Details
             transactionReceipt = new Transactions();
-            transactionReceipt.tokenId = parseInt(event.returnValues[0]);
-            transactionReceipt.quantity = parseInt(1);
+            transactionReceipt.tokenId = parseInt(event.returnValues[1]);
+            transactionReceipt.quantity = parseInt(2);
             transactionReceipt.to = res.returnValues.to.toLowerCase();
             transactionReceipt.from =
               "from" in res.returnValues
@@ -221,6 +221,8 @@ const sellFractionsCallout = async (args) => {
                 : "0x00000000000000000000000000000000";
             transactionReceipt.blockNumber = parseInt(event.blockNumber);
             transactionReceipt.txId = event.transactionHash;
+            transactionReceipt.txNo = parseInt(event.returnValues[3]);
+            transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
 
             await transactionReceipt.save();
             await fractionsData.save();
@@ -228,6 +230,70 @@ const sellFractionsCallout = async (args) => {
         }
       });
   } catch (error) {
+    console.log(error.cause);
+    transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
+    console.log(error);
+  } finally {
+    await transactionReceipt.save();
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : transactionReceipt.txId;
+  }
+};
+
+const buyTokensCallout = async (args) => {
+  let transactionReceipt = new Transactions();
+  let nftReceipt = new NFTDetails();
+  let fractionsReceipt = new FractionsDetails();
+  let res;
+  try {
+    RNFTContract = await getContractObj("RNFT");
+    Escrow1155Contract = await getContractObj("Escrow1155");
+    // Fetch token / fractions details
+    let data =
+      args.fractionId != 0
+        ? await Transactions.findOne({
+            parentTokenId: args.tokenId,
+            tokenId: args.fractionId,
+          })
+        : await Transactions.findOne({
+            tokenId: args.tokenId,
+          });
+
+    console.log("DATA ====> ", data);
+
+    await Escrow1155Contract.methods
+      .depositETH(data.txNo)
+      .send({
+        from: args.ownerAddress,
+        gas: 1000000,
+        value: Math.pow(10, 18) * args.price + 1000000,
+      })
+      .on("receipt", async (receipt) => {
+        let escrow1155Events = await Escrow1155Contract.getPastEvents(
+          "allEvents"
+        );
+        if (escrow1155Events.length > 0) {
+          escrow1155Events.forEach(async (event) => {
+            transactionReceipt = new Transactions();
+            transactionReceipt.tokenId = parseInt(event.returnValues[1]);
+            transactionReceipt.quantity = parseInt(1);
+            transactionReceipt.to = receipt.to.toLowerCase();
+            transactionReceipt.from =
+              "from" in receipt
+                ? receipt.from.toLowerCase()
+                : "0x00000000000000000000000000000000";
+            transactionReceipt.blockNumber = parseInt(event.blockNumber);
+            transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
+            transactionReceipt.txId = event.transactionHash;
+            await transactionReceipt.save();
+          });
+        }
+      });
+  } catch (error) {
+    console.log(error.cause);
+    transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
+    console.log(error);
   } finally {
   }
 };
@@ -237,4 +303,5 @@ module.exports = {
   sellNFTCallout,
   fractionNFTCallout,
   sellFractionsCallout,
+  buyTokensCallout,
 };

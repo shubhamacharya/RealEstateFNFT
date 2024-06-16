@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const transactionDtails = mongoose.Schema({
   tokenId: {
-    type: String,
+    type: Number,
     //required: true, // [true, "Please Enter the Token URI"],
   },
   quantity: {
@@ -26,6 +26,14 @@ const transactionDtails = mongoose.Schema({
   },
   txId: {
     type: String,
+  },
+  txNo: {
+    type: Number,
+    default: 0
+  },
+  parentTokenId: {
+    type: Number,
+    default: 0
   },
   error: {
     type: String,
