@@ -1,7 +1,7 @@
 let { Web3 } = require("web3");
 require("dotenv").config({ path: "../.env" });
 const fsPromise = require("fs/promises");
-const web3 = new Web3(new Web3.providers.HttpProvider(process.env.PROVIDER));
+const web3 = new Web3(Web3.givenProvider || process.env.PROVIDER);
 var RNFTContract, Escrow1155Contract;
 const abiDecoder = require("abi-decoder");
 
@@ -55,24 +55,35 @@ const mintNFTCallout = async (args) => {
         .send({ from: process.env.ADMIN_ADDRESS });
     }
     // Convert price from ethers to wei by multiplying it with 10^18
-    await RNFTContract.methods
-      .createNFT(args.price * Math.pow(10, 18))
-      .send({ from: args.ownerAddress, gas: 1000000 })
-      .on("receipt", async (receipt) => {
-        res = receipt.events.NFTCreated;
-        nftReceipt.tokenId = parseInt(res.returnValues.tokenId);
-        nftReceipt.name = args.name;
-        nftReceipt.tokenURI = args.tokenURI;
-        nftReceipt.price = parseFloat(
-          Number(res.returnValues.price) / Number(Math.pow(10, 18))
-        );
-        nftReceipt.ownerAddress = res.returnValues.to.toLowerCase();
-        nftReceipt.blockNo = parseInt(res.blockNumber);
-        nftReceipt.txId = res.transactionHash;
-        nftReceipt.tokenImg = args.images;
+    const receipt = await RNFTContract.methods
+    .createNFT(args.price * Math.pow(10, 18))
+    .send({ from: args.ownerAddress, gas: 1000000 });
 
-        await nftReceipt.save();
-      });
+
+    console.log(await web3.eth.getTransactionReceipt(receipt['transactionHash']));
+    if (receipt.events?.NFTCreated) {
+      res = receipt.events.NFTCreated;
+      nftReceipt.tokenId = parseInt(res?.returnValues.tokenId);
+      nftReceipt.name = args.name;
+      nftReceipt.tokenURI = args.tokenURI;
+      nftReceipt.price = parseFloat(
+        Number(res.returnValues.price) / Number(Math.pow(10, 18))
+      );
+      nftReceipt.ownerAddress = res.returnValues.to.toLowerCase();
+      nftReceipt.blockNo = parseInt(res.blockNumber);
+      nftReceipt.txId = res.transactionHash;
+      nftReceipt.tokenImg = args.images;
+
+      await nftReceipt.save();
+    } else {
+      pastEvent = await new web3.eth.Contract(
+        await getABI(process.env.RNFT_CONTRACT_ABI_PATH)
+      ).events.allEvents({ fromBlock: receipt.blockNumber });
+
+      // console.log(pastEvent);
+
+      console.log("Event Not Generated");
+    }
   } catch (error) {
     console.log("err ==> ", error);
     transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
@@ -298,10 +309,69 @@ const buyTokensCallout = async (args) => {
   }
 };
 
+const intitateTransferCallout = async (args) => {
+  let transactionReceipt = new Transactions();
+  let nftReceipt = new NFTDetails();
+  let fractionsReceipt = new FractionsDetails();
+  let res;
+  try {
+    RNFTContract = await getContractObj("RNFT");
+    Escrow1155Contract = await getContractObj("Escrow1155");
+    // Fetch token / fractions details
+    let data =
+      args.fractionId != 0
+        ? await Transactions.findOne({
+            parentTokenId: args.tokenId,
+            tokenId: args.fractionId,
+          })
+        : await Transactions.findOne({
+            tokenId: args.tokenId,
+          });
+
+    console.log("DATA ====> ", data);
+
+    await Escrow1155Contract.methods
+      .initiateDelivery(data.txNo)
+      .send({
+        from: args.ownerAddress,
+        gas: 1000000,
+      })
+      .on("receipt", async (receipt) => {
+        let escrow1155Events = await Escrow1155Contract.getPastEvents(
+          "allEvents"
+        );
+        console.log("RECEIPT ====> ", receipt);
+        if (escrow1155Events.length > 0) {
+          escrow1155Events.forEach(async (event) => {
+            console.log("Event ====> ", event);
+            // transactionReceipt = new Transactions();
+            // transactionReceipt.tokenId = parseInt(event.returnValues[1]);
+            // transactionReceipt.quantity = parseInt(1);
+            // transactionReceipt.to = receipt.to.toLowerCase();
+            // transactionReceipt.from =
+            //   "from" in receipt
+            //     ? receipt.from.toLowerCase()
+            //     : "0x00000000000000000000000000000000";
+            // transactionReceipt.blockNumber = parseInt(event.blockNumber);
+            // transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
+            // transactionReceipt.txId = event.transactionHash;
+            // await transactionReceipt.save();
+          });
+        }
+      });
+  } catch (error) {
+    console.log(error.cause);
+    transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
+    console.log(error);
+  } finally {
+  }
+};
+
 module.exports = {
   mintNFTCallout,
   sellNFTCallout,
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
+  // intitateTransferCallout,
 };

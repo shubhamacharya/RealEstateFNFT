@@ -22,6 +22,7 @@ const {
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
+  // intitateTransferCallout
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -237,6 +238,20 @@ const mutation = new GraphQLObjectType({
         return await FractionsDetails.findOne({ txId }).exec();
       },
     },
+
+    // initiateDelivery: {
+    //   type: fnftDetailsType | nftDetailsType,
+    //   args: {
+    //     tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+    //     fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+    //     ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+    //   },
+    //   async resolve(parent, args) {
+    //     let txId = await intitateTransferCallout(args);
+    //     // return await FractionsDetails.findOne({ txId }).exec();
+    //     return "0x00000000000000000000000000000000000000"
+    //   },
+    // },
   },
 });
 

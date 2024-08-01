@@ -139,7 +139,7 @@ function LoginForm({ setFormData }) {
         margin="dense"
         id="regCnfPasswd"
         label="Confirm Password"
-        type="passworf"
+        type="password"
         fullWidth
         variant="standard"
         name="regCnfPasswd"

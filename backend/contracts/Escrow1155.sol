@@ -37,8 +37,11 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     mapping(uint256 => Transaction) public transactionArray;
 
     address public ERC1155Address;
+
     event TokenDepoisted(uint256, uint256, uint256, uint256);
     event EtherDeposited(uint256, uint256, address);
+    event DeliveryInitiated(uint256);
+    event DeliveryConfirmed(uint256);
 
     constructor(address _ERC1155Address) {
         ERC1155Address = _ERC1155Address;
@@ -161,6 +164,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         noDispute(_transactionId)
     {
         transactionArray[_transactionId].transactionStatus = Status.DELIVERY;
+        emit DeliveryInitiated(_transactionId);
     }
 
     function confirmDelivery(
@@ -182,6 +186,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         // require(success, "Failed to transfer amount to seller.");
         txn.transactionStatus = Status.CONFIRMED;
         transactionArray[_transactionId] = txn;
+        emit DeliveryConfirmed(_transactionId);
     }
 
     function getBalance() public view returns (uint256 balance) {
