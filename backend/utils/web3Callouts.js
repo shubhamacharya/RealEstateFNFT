@@ -1,7 +1,8 @@
 let { Web3 } = require("web3");
 require("dotenv").config({ path: "../.env" });
 const fsPromise = require("fs/promises");
-const web3 = new Web3(Web3.givenProvider || process.env.PROVIDER);
+const web3 = new Web3(new Web3.providers.HttpProvider(process.env.PROVIDER));
+web3.eth.handleRevert = true;
 var RNFTContract, Escrow1155Contract;
 const abiDecoder = require("abi-decoder");
 
@@ -23,7 +24,7 @@ const deployContract = async (contractName) => {
       rnftABI,
       process.env.RNFT_CONTRACT_ADDRESS
     );
-    RNFTContract.options.handleRevert = true;
+    // RNFTContract.options.handleRevert = true;
   } else {
     const escrow1155ABI = await getABI(
       process.env.ESCROW1155_CONTRACT_ABI_PATH
@@ -32,7 +33,7 @@ const deployContract = async (contractName) => {
       escrow1155ABI,
       process.env.Escrow1155_CONTRACT_ADDRESS
     );
-    Escrow1155Contract.options.handleRevert = true;
+    // Escrow1155Contract.options.handleRevert = true;
   }
 };
 
@@ -56,11 +57,9 @@ const mintNFTCallout = async (args) => {
     }
     // Convert price from ethers to wei by multiplying it with 10^18
     const receipt = await RNFTContract.methods
-    .createNFT(args.price * Math.pow(10, 18))
-    .send({ from: args.ownerAddress, gas: 1000000 });
+      .createNFT(args.price * Math.pow(10, 18))
+      .send({ from: args.ownerAddress, gas: 1000000 });
 
-
-    console.log(await web3.eth.getTransactionReceipt(receipt['transactionHash']));
     if (receipt.events?.NFTCreated) {
       res = receipt.events.NFTCreated;
       nftReceipt.tokenId = parseInt(res?.returnValues.tokenId);
@@ -271,8 +270,6 @@ const buyTokensCallout = async (args) => {
             tokenId: args.tokenId,
           });
 
-    console.log("DATA ====> ", data);
-
     await Escrow1155Contract.methods
       .depositETH(data.txNo)
       .send({
@@ -306,6 +303,10 @@ const buyTokensCallout = async (args) => {
     transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
     console.log(error);
   } finally {
+    await transactionReceipt.save();
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : transactionReceipt.txId;
   }
 };
 
@@ -328,8 +329,6 @@ const intitateTransferCallout = async (args) => {
             tokenId: args.tokenId,
           });
 
-    console.log("DATA ====> ", data);
-
     await Escrow1155Contract.methods
       .initiateDelivery(data.txNo)
       .send({
@@ -340,22 +339,23 @@ const intitateTransferCallout = async (args) => {
         let escrow1155Events = await Escrow1155Contract.getPastEvents(
           "allEvents"
         );
-        console.log("RECEIPT ====> ", receipt);
         if (escrow1155Events.length > 0) {
           escrow1155Events.forEach(async (event) => {
-            console.log("Event ====> ", event);
-            // transactionReceipt = new Transactions();
-            // transactionReceipt.tokenId = parseInt(event.returnValues[1]);
-            // transactionReceipt.quantity = parseInt(1);
-            // transactionReceipt.to = receipt.to.toLowerCase();
-            // transactionReceipt.from =
-            //   "from" in receipt
-            //     ? receipt.from.toLowerCase()
-            //     : "0x00000000000000000000000000000000";
-            // transactionReceipt.blockNumber = parseInt(event.blockNumber);
-            // transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
-            // transactionReceipt.txId = event.transactionHash;
-            // await transactionReceipt.save();
+            
+            transactionReceipt = new Transactions();
+            transactionReceipt.tokenId = parseInt(
+              event.returnValues.__length__ > 1 ? event.returnValues[1] : event.returnValues[0]
+            );
+            transactionReceipt.quantity = parseInt(1);
+            transactionReceipt.to = receipt.to.toLowerCase();
+            transactionReceipt.from =
+              "from" in receipt
+                ? receipt.from.toLowerCase()
+                : "0x00000000000000000000000000000000";
+            transactionReceipt.blockNumber = parseInt(event.blockNumber);
+            transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
+            transactionReceipt.txId = event.transactionHash;
+            await transactionReceipt.save();
           });
         }
       });
@@ -364,6 +364,10 @@ const intitateTransferCallout = async (args) => {
     transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
     console.log(error);
   } finally {
+    await transactionReceipt.save();
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : transactionReceipt.txId;
   }
 };
 
@@ -373,5 +377,5 @@ module.exports = {
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
-  // intitateTransferCallout,
+  intitateTransferCallout,
 };

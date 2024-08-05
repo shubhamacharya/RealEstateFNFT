@@ -22,7 +22,7 @@ const {
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
-  // intitateTransferCallout
+  intitateTransferCallout
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -105,6 +105,7 @@ const RootQuery = new GraphQLObjectType({
         }).exec();
       },
     },
+
     fnftOfUsers: {
       type: fnftDetailsType,
       args: { NFTId: { type: GraphQLInt } },
@@ -239,19 +240,23 @@ const mutation = new GraphQLObjectType({
       },
     },
 
-    // initiateDelivery: {
-    //   type: fnftDetailsType | nftDetailsType,
-    //   args: {
-    //     tokenId: { type: new GraphQLNonNull(GraphQLInt) },
-    //     fractionId: { type: new GraphQLNonNull(GraphQLInt) },
-    //     ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
-    //   },
-    //   async resolve(parent, args) {
-    //     let txId = await intitateTransferCallout(args);
-    //     // return await FractionsDetails.findOne({ txId }).exec();
-    //     return "0x00000000000000000000000000000000000000"
-    //   },
-    // },
+    intitateTransfer: {
+      type: new GraphQLObjectType({
+        name: 'InitiateDeliveryResponse',
+        fields: {
+          txid: { type: GraphQLString }
+        }}),
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await intitateTransferCallout(args);
+        // return await FractionsDetails.findOne({ txId }).exec();
+        return {txid:"0x00000000000000000000000000000000000000"}
+      },
+    },
   },
 });
 
