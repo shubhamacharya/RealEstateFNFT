@@ -371,6 +371,67 @@ const intitateTransferCallout = async (args) => {
   }
 };
 
+const confirmDelivaryCallout = async (args) => {
+  let transactionReceipt = new Transactions();
+  let nftReceipt = new NFTDetails();
+  let fractionsReceipt = new FractionsDetails();
+  let res;
+  try {
+    RNFTContract = await getContractObj("RNFT");
+    Escrow1155Contract = await getContractObj("Escrow1155");
+    // Fetch token / fractions details
+    let data =
+      args.fractionId != 0
+        ? await Transactions.findOne({
+            parentTokenId: args.tokenId,
+            tokenId: args.fractionId,
+          })
+        : await Transactions.findOne({
+            tokenId: args.tokenId,
+          });
+
+    await Escrow1155Contract.methods
+      .confirmDelivery(data.txNo)
+      .send({
+        from: args.ownerAddress,
+        gas: 1000000,
+      })
+      .on("receipt", async (receipt) => {
+        let escrow1155Events = await Escrow1155Contract.getPastEvents(
+          "allEvents"
+        );
+        if (escrow1155Events.length > 0) {
+          escrow1155Events.forEach(async (event) => {
+            
+            transactionReceipt = new Transactions();
+            transactionReceipt.tokenId = parseInt(
+              event.returnValues.__length__ > 1 ? event.returnValues[1] : event.returnValues[0]
+            );
+            transactionReceipt.quantity = parseInt(1);
+            transactionReceipt.to = receipt.to.toLowerCase();
+            transactionReceipt.from =
+              "from" in receipt
+                ? receipt.from.toLowerCase()
+                : "0x00000000000000000000000000000000";
+            transactionReceipt.blockNumber = parseInt(event.blockNumber);
+            transactionReceipt.parentTokenId = parseInt(event.returnValues[0]);
+            transactionReceipt.txId = event.transactionHash;
+            await transactionReceipt.save();
+          });
+        }
+      });
+  } catch (error) {
+    console.log(error.cause);
+    transactionReceipt.error = web3.utils.hexToAscii(error.cause.data);
+    console.log(error);
+  } finally {
+    await transactionReceipt.save();
+    return transactionReceipt.error
+      ? transactionReceipt.error
+      : transactionReceipt.txId;
+  }
+};
+
 module.exports = {
   mintNFTCallout,
   sellNFTCallout,
@@ -378,4 +439,5 @@ module.exports = {
   sellFractionsCallout,
   buyTokensCallout,
   intitateTransferCallout,
+  confirmDelivaryCallout,
 };

@@ -22,7 +22,8 @@ const {
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
-  intitateTransferCallout
+  intitateTransferCallout,
+  confirmDelivaryCallout
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -253,6 +254,24 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(parent, args) {
         let txId = await intitateTransferCallout(args);
+        return await FractionsDetails.findOne({ txId }).exec();
+        // return {txid:"0x00000000000000000000000000000000000000"}
+      },
+    },
+
+    confirmDelivary: {
+      type: new GraphQLObjectType({
+        name: 'ConfirmDelivaryResponse',
+        fields: {
+          txid: { type: GraphQLString }
+        }}),
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await confirmDelivaryCallout(args);
         // return await FractionsDetails.findOne({ txId }).exec();
         return {txid:"0x00000000000000000000000000000000000000"}
       },
