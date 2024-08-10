@@ -21,6 +21,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         Status transactionStatus;
         bool buyerCancel;
         bool sellerCancel;
+        string error;
     }
 
     enum Status {
@@ -48,13 +49,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         _transactionIdCounter.increment();
     }
 
-    function depositToken(
-        address tokenOwner,
-        uint256 _tokenID,
-        uint256 _parentTokenId,
-        uint256 _amount,
-        uint256 _noOfTokens
-    ) public payable {
+    function depositToken( address tokenOwner, uint256 _tokenID, uint256 _parentTokenId, uint256 _amount, uint256 _noOfTokens) public payable {
         Transaction memory txn;
         txn.id = _transactionIdCounter.current();
         txn.tokenID = _tokenID;
@@ -77,9 +72,7 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
         emit TokenDepoisted(_parentTokenId, _tokenID, _amount, txn.id);
     }
 
-    function depositETH(
-        uint256 _transactionId
-    ) public payable currentStatus(Status.DEPOSITE, _transactionId) {
+    function depositETH(uint256 _transactionId) public payable currentStatus(Status.DEPOSITE, _transactionId) {
         Transaction memory txn = transactionArray[_transactionId];
         require(
             txn.amount >= msg.value,
@@ -192,6 +185,10 @@ contract Escrow1155 is IERC1155Receiver, ReentrancyGuard {
     function getBalance() public view returns (uint256 balance) {
         return address(this).balance;
     }
+
+    function getERC1155Balance(uint256 _tokenId) public view returns (uint256) {
+    return ERC1155(ERC1155Address).balanceOf(address(this), _tokenId);
+}
 
     function getTransactionStatus(
         uint256 _transactionId

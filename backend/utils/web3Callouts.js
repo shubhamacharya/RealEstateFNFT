@@ -261,7 +261,7 @@ const buyTokensCallout = async (args) => {
     Escrow1155Contract = await getContractObj("Escrow1155");
     // Fetch token / fractions details
     let data =
-      args.fractionId != 0
+      args?.fractionId && args.fractionId != 0
         ? await Transactions.findOne({
             parentTokenId: args.tokenId,
             tokenId: args.fractionId,
@@ -320,7 +320,7 @@ const intitateTransferCallout = async (args) => {
     Escrow1155Contract = await getContractObj("Escrow1155");
     // Fetch token / fractions details
     let data =
-      args.fractionId != 0
+      args?.fractionId && args.fractionId != 0
         ? await Transactions.findOne({
             parentTokenId: args.tokenId,
             tokenId: args.fractionId,
@@ -341,10 +341,11 @@ const intitateTransferCallout = async (args) => {
         );
         if (escrow1155Events.length > 0) {
           escrow1155Events.forEach(async (event) => {
-            
             transactionReceipt = new Transactions();
             transactionReceipt.tokenId = parseInt(
-              event.returnValues.__length__ > 1 ? event.returnValues[1] : event.returnValues[0]
+              event.returnValues.__length__ > 1
+                ? event.returnValues[1]
+                : event.returnValues[0]
             );
             transactionReceipt.quantity = parseInt(1);
             transactionReceipt.to = receipt.to.toLowerCase();
@@ -402,10 +403,11 @@ const confirmDelivaryCallout = async (args) => {
         );
         if (escrow1155Events.length > 0) {
           escrow1155Events.forEach(async (event) => {
-            
             transactionReceipt = new Transactions();
             transactionReceipt.tokenId = parseInt(
-              event.returnValues.__length__ > 1 ? event.returnValues[1] : event.returnValues[0]
+              event.returnValues.__length__ > 1
+                ? event.returnValues[1]
+                : event.returnValues[0]
             );
             transactionReceipt.quantity = parseInt(1);
             transactionReceipt.to = receipt.to.toLowerCase();
@@ -432,6 +434,32 @@ const confirmDelivaryCallout = async (args) => {
   }
 };
 
+// Query
+
+const QueryEscrow1155TxWithTxIdCallout = async (args) => {
+  var  data
+  try {
+    Escrow1155Contract = await getContractObj("Escrow1155");
+    // Check current transaction count.
+    currentTxCounter = await Escrow1155Contract.methods
+      ._transactionIdCounter(args.escrowTxId)
+      .call();
+    if (args.escrowTxId < currentTxCounter) {
+      data = await Escrow1155Contract.methods
+        .transactionArray(args.escrowTxId)
+        .call();
+      } else {
+        data = {error : "No transaction with id " + args.escrowTxId};
+      }
+  } catch (error) {
+    console.log(`Error while Query Escrow1155Tx using txId`);
+    data = {error};
+  } finally {
+
+    return data;
+  }
+};
+
 module.exports = {
   mintNFTCallout,
   sellNFTCallout,
@@ -440,4 +468,6 @@ module.exports = {
   buyTokensCallout,
   intitateTransferCallout,
   confirmDelivaryCallout,
+
+  QueryEscrow1155TxWithTxIdCallout,
 };
