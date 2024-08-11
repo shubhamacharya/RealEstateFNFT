@@ -100,16 +100,34 @@ const RootQuery = new GraphQLObjectType({
       type: new GraphQLList(nftDetailsType),
       args: { ownerAddress: { type: GraphQLString } },
       async resolve(parent, args) {
-        return await NFTDetails.find({
+        const res = await NFTDetails.find({
           ownerAddress: args.ownerAddress.toLowerCase(),
         }).exec();
+        console.log("res", res);
+
+        return res;
       },
     },
     fnftOfUsers: {
       type: fnftDetailsType,
       args: { NFTId: { type: GraphQLInt } },
       async resolve(parent, args) {
-        return await FractionsDetails.findOne({ tokenId: args.NFTId }).exec();
+        const res = await FractionsDetails.findOne({
+          tokenId: args.NFTId,
+        }).exec();
+        console.log("REs ", res);
+
+        return res;
+      },
+    },
+    getUsers: {
+      type: UsersType,
+      args: { email: { type: GraphQLString } },
+      async resolve(parent, args) {
+        const res = await Users.findOne({ email: args.email }).exec();
+        console.log("REs ", res);
+
+        return res;
       },
     },
   },
