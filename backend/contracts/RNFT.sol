@@ -77,8 +77,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
 
     function createFractions(uint256 _tokenId, uint256 _noOfFractions)
         external
-        onlyOwner(_tokenId)
-    {
+        onlyOwner(_tokenId) {
         require(exists(_tokenId), "Invalid Token Id");
         Token storage tempToken = tokenIdVsToken[_tokenId];
         for (uint256 index = 1; index <= _noOfFractions; index++) {
@@ -136,6 +135,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
         require(balanceOf(msg.sender, _tokenId) == 1, "Not enough tokens.");
         setApproval(msg.sender, escrowContract, _tokenId, true);
         tokenIdVsToken[_tokenId].forSale = true;
+        tokenIdVsToken[_tokenId].owner = escrowContract;
         Escrow1155(escrowContract).depositToken(
             msg.sender,
             _tokenId,
@@ -189,12 +189,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
         require(balanceOf(msg.sender, _tokenId) == 1, "Issue while transferring NFT");    
     }
 
-    function setApproval(
-        address owner,
-        address operator,
-        uint256 _tokenId,
-        bool approved
-    ) public {
+    function setApproval( address owner, address operator, uint256 _tokenId, bool approved) public {
         _setApprovalForAll(owner, operator, approved);
         if (approved) {
             _tokenApprovals[_tokenId] = operator;
@@ -213,13 +208,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
         }
     }
 
-    function onERC1155Received(
-        address,
-        address,
-        uint256 _tokenID,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC1155Received( address, address, uint256 _tokenID, uint256, bytes calldata) external pure override returns (bytes4) {
         return
             bytes4(
                 keccak256(
@@ -228,37 +217,19 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
             );
     }
 
-    function onERC1155BatchReceived(
-        address,
-        address,
-        uint256[] calldata,
-        uint256[] calldata,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC1155BatchReceived(address,address,uint256[] calldata,uint256[] calldata,bytes calldata) external pure override returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC1155, ERC1155Receiver)
-        returns (bool)
-    {
-        return
-            ERC1155.supportsInterface(interfaceId) ||
-            ERC1155Receiver.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC1155Receiver) returns (bool) {
+        return ERC1155.supportsInterface(interfaceId) || ERC1155Receiver.supportsInterface(interfaceId);
     }
 
-    function getTokenIdVsFractionIds(uint256 _tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getTokenIdVsFractionIds(uint256 _tokenId) external view returns (uint256[] memory){
         return tokenIdVsFractionIds[_tokenId];
     }
 
-     function burn(address account, uint256 id, uint256 value) public override {
+    function burn(address account, uint256 id, uint256 value) public override {
         // if(!isApprovedForId(account, id)) {
         //     revert ERC1155MissingApprovalForAll(_msgSender(), account);
         // }
@@ -274,14 +245,7 @@ contract RNFT is ERC1155Supply, ERC1155Receiver, ERC1155Burnable {
     //     super._update(from, to, ids, amounts);
     // }
 
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal override(ERC1155, ERC1155Supply) {
+    function _beforeTokenTransfer( address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal override(ERC1155, ERC1155Supply) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 

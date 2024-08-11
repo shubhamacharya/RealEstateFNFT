@@ -22,7 +22,10 @@ const {
   fractionNFTCallout,
   sellFractionsCallout,
   buyTokensCallout,
-  // intitateTransferCallout
+  intitateTransferCallout,
+  confirmDelivaryCallout,
+
+  QueryEscrow1155TxWithTxIdCallout
 } = require("../utils/web3Callouts");
 
 // Users Type
@@ -93,6 +96,24 @@ const fnftDetailsType = new GraphQLObjectType({
   }),
 });
 
+const Escrow1155Transaction = new GraphQLObjectType({
+  name: "Escrow1155Transaction",
+  fields: () => ({
+    _id: { type: GraphQLID },
+    txID: { type: GraphQLInt },
+    tokenId: { type: GraphQLInt },
+    seller: { type: GraphQLString },
+    buyer: { type: GraphQLString },
+    parentTokenID: { type: GraphQLInt },
+    amount: { type: GraphQLString },
+    noOfTokens: { type: GraphQLInt },
+    transactionStatus: { type: GraphQLInt },
+    buyerCancel: { type: GraphQLBoolean },
+    sellerCancel: { type: GraphQLBoolean },
+    error: {type: GraphQLString}
+  }),
+});
+
 const RootQuery = new GraphQLObjectType({
   name: "RootQuery",
   fields: {
@@ -108,6 +129,7 @@ const RootQuery = new GraphQLObjectType({
         return res;
       },
     },
+
     fnftOfUsers: {
       type: fnftDetailsType,
       args: { NFTId: { type: GraphQLInt } },
@@ -129,6 +151,14 @@ const RootQuery = new GraphQLObjectType({
 
         return res;
       },
+    },
+
+    escrow1155TransactionStatus: {
+      type: Escrow1155Transaction,
+      args: { escrowTxId: { type: GraphQLInt } },
+      async resolve(parent, args) {
+        return await QueryEscrow1155TxWithTxIdCallout(args)
+      }
     },
   },
 });
@@ -244,8 +274,29 @@ const mutation = new GraphQLObjectType({
       },
     },
 
+    // buyNFT: {
+    //   type: new GraphQLObjectType({
+    //     name: 'InitiateNFTDeliveryResponse',
+    //     fields: {
+    //       txid: { type: GraphQLString }
+    //     }}),
+    //   args: {
+    //     tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+    //     ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+    //   },
+    //   async resolve(parent, args) {
+    //     let txId = await buyTokensCallout(args);
+    //     return await FractionsDetails.findOne({ txId }).exec();
+    //   },
+    // },
+
     buyTokens: {
-      type: fnftDetailsType,
+      type: new GraphQLObjectType({
+        name: "InitiateDeliveryResponse",
+        fields: {
+          txId: { type: GraphQLString },
+        },
+      }),
       args: {
         tokenId: { type: new GraphQLNonNull(GraphQLInt) },
         fractionId: { type: new GraphQLNonNull(GraphQLInt) },
@@ -257,19 +308,43 @@ const mutation = new GraphQLObjectType({
       },
     },
 
-    // initiateDelivery: {
-    //   type: fnftDetailsType | nftDetailsType,
-    //   args: {
-    //     tokenId: { type: new GraphQLNonNull(GraphQLInt) },
-    //     fractionId: { type: new GraphQLNonNull(GraphQLInt) },
-    //     ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
-    //   },
-    //   async resolve(parent, args) {
-    //     let txId = await intitateTransferCallout(args);
-    //     // return await FractionsDetails.findOne({ txId }).exec();
-    //     return "0x00000000000000000000000000000000000000"
-    //   },
-    // },
+    intitateTransfer: {
+      type: new GraphQLObjectType({
+        name: "InitiateTransferResponse",
+        fields: {
+          txId: { type: GraphQLString },
+        },
+      }),
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await intitateTransferCallout(args);
+        return await FractionsDetails.findOne({ txId }).exec();
+        // return {txid:"0x00000000000000000000000000000000000000"}
+      },
+    },
+
+    confirmDelivary: {
+      type: new GraphQLObjectType({
+        name: "ConfirmDelivaryResponse",
+        fields: {
+          txId: { type: GraphQLString },
+        },
+      }),
+      args: {
+        tokenId: { type: new GraphQLNonNull(GraphQLInt) },
+        fractionId: { type: new GraphQLNonNull(GraphQLInt) },
+        ownerAddress: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      async resolve(parent, args) {
+        let txId = await confirmDelivaryCallout(args);
+        // return await FractionsDetails.findOne({ txId }).exec();
+        return { txid: "0x00000000000000000000000000000000000000" };
+      },
+    },
   },
 });
 
